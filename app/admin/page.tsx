@@ -1,0 +1,86 @@
+import { requireStaff } from "@/lib/auth";
+import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { SalonBoard } from "./_components/salon-board";
+import type {
+  Alert,
+  AlertType,
+  BarTable,
+  Order,
+  OrderItemWithProduct,
+  Product,
+  Profile,
+  TableDetail,
+} from "@/lib/types";
+
+export const dynamic = "force-dynamic";
+
+type OrderWithItems = Order & { order_items: OrderItemWithProduct[] };
+
+export default async function SalonPage() {
+  const profile = await requireStaff();
+  const supabase = await getSupabaseServerClient();
+
+  const [tablesRes, ordersRes, productsRes, waitersRes, alertsRes] =
+    await Promise.all([
+      supabase.from("tables").select("*").order("number"),
+      supabase
+        .from("orders")
+        .select("*, order_items(*, product:products(id, name, category))")
+        .eq("status", "abierta"),
+      supabase
+        .from("products")
+        .select("*")
+        .eq("active", true)
+        .order("category")
+        .order("name"),
+      supabase.from("profiles").select("id, full_name"),
+      supabase.from("alerts").select("*").eq("status", "pendiente"),
+    ]);
+
+  const tables = (tablesRes.data ?? []) as BarTable[];
+  const orders = (ordersRes.data ?? []) as OrderWithItems[];
+  const products = (productsRes.data ?? []) as Product[];
+  const alerts = (alertsRes.data ?? []) as Alert[];
+
+  const ordersByTable = new Map(orders.map((o) => [o.table_id, o]));
+
+  const details: TableDetail[] = tables.map((table) => {
+    const found = ordersByTable.get(table.id);
+    if (!found) return { table, order: null, items: [] };
+
+    const { order_items, ...order } = found;
+    return {
+      table,
+      order,
+      // Orden estable: como se fue cargando, no como lo devuelve Postgres.
+      items: [...order_items].sort((a, b) =>
+        a.created_at.localeCompare(b.created_at)
+      ),
+    };
+  });
+
+  const waiters: Record<string, string> = Object.fromEntries(
+    ((waitersRes.data ?? []) as Pick<Profile, "id" | "full_name">[]).map((p) => [
+      p.id,
+      p.full_name,
+    ])
+  );
+
+  const pendingAlerts = alerts.reduce<Record<string, AlertType[]>>(
+    (acc, alert) => {
+      (acc[alert.table_id] ??= []).push(alert.type);
+      return acc;
+    },
+    {}
+  );
+
+  return (
+    <SalonBoard
+      tables={details}
+      products={products}
+      waiters={waiters}
+      currentUserId={profile.id}
+      pendingAlerts={pendingAlerts}
+    />
+  );
+}

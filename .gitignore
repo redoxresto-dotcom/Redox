@@ -1,0 +1,22 @@
+node_modules/
+.next/
+out/
+build/
+.DS_Store
+*.pem
+
+# herramientas locales
+.claude/
+.vercel/
+
+# env
+.env
+.env.local
+.env*.local
+
+# credenciales repartidas al personal
+credenciales-iniciales.txt
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts

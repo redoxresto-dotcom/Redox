@@ -1,0 +1,64 @@
+"use client";
+
+import { useActionState } from "react";
+import { useFormStatus } from "react-dom";
+import { signIn, type LoginState } from "./actions";
+
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="w-full rounded-xl bg-[var(--color-accent)] px-4 py-3.5 font-semibold text-[#04121c] transition-opacity disabled:opacity-50"
+    >
+      {pending ? "Entrando…" : "Entrar"}
+    </button>
+  );
+}
+
+export function LoginForm({ redirectTo }: { redirectTo: string }) {
+  const [state, formAction] = useActionState<LoginState, FormData>(signIn, {
+    error: null,
+  });
+
+  return (
+    <form action={formAction} className="grid gap-4">
+      <input type="hidden" name="redirect" value={redirectTo} />
+
+      <label className="grid gap-1.5">
+        <span className="text-sm text-[var(--color-muted)]">Correo</span>
+        <input
+          name="email"
+          type="email"
+          autoComplete="username"
+          required
+          autoFocus
+          className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-3 outline-none focus:border-[var(--color-accent)]"
+        />
+      </label>
+
+      <label className="grid gap-1.5">
+        <span className="text-sm text-[var(--color-muted)]">Contraseña</span>
+        <input
+          name="password"
+          type="password"
+          autoComplete="current-password"
+          required
+          className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-3 outline-none focus:border-[var(--color-accent)]"
+        />
+      </label>
+
+      {state.error ? (
+        <p
+          role="alert"
+          className="rounded-lg border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 px-3 py-2 text-sm text-[var(--color-danger)]"
+        >
+          {state.error}
+        </p>
+      ) : null}
+
+      <SubmitButton />
+    </form>
+  );
+}

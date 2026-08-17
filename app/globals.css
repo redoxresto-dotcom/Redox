@@ -1,0 +1,34 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0b0f14;
+  --color-surface: #141b23;
+  --color-surface-2: #1c2530;
+  --color-border: #2a3644;
+  --color-ink: #e8eef5;
+  --color-muted: #8b9bad;
+  --color-accent: #38bdf8;
+  --color-free: #22c55e;
+  --color-busy: #f59e0b;
+  --color-danger: #ef4444;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Evita el zoom automático de iOS al enfocar inputs en la vista del cliente. */
+input,
+select,
+textarea,
+button {
+  font-size: 16px;
+}

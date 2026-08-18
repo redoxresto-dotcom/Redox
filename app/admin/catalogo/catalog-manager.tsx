@@ -10,11 +10,14 @@ import {
 import {
   CATEGORY_LABELS,
   formatMoney,
+  STATION_LABELS,
   type Product,
   type ProductCategory,
+  type Station,
 } from "@/lib/types";
 
 const CATEGORIES: ProductCategory[] = ["bebida", "comida", "otro"];
+const STATIONS: Station[] = ["barra", "cocina", "ninguna"];
 
 /** Margen bruto sobre el precio de venta. */
 function margin(product: Product): number | null {
@@ -110,6 +113,7 @@ export function CatalogManager({ products }: { products: Product[] }) {
             <tr>
               <th className="px-4 py-2.5 font-medium">Producto</th>
               <th className="px-4 py-2.5 font-medium">Categoría</th>
+              <th className="px-4 py-2.5 font-medium">Estación</th>
               <th className="px-4 py-2.5 text-right font-medium">Venta</th>
               <th className="px-4 py-2.5 text-right font-medium">Costo</th>
               <th className="px-4 py-2.5 text-right font-medium">Margen</th>
@@ -120,7 +124,7 @@ export function CatalogManager({ products }: { products: Product[] }) {
             {visible.length === 0 ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   className="px-4 py-10 text-center text-[var(--color-muted)]"
                 >
                   {search ? "Ningún producto coincide." : "El catálogo está vacío."}
@@ -139,7 +143,7 @@ export function CatalogManager({ products }: { products: Product[] }) {
                     }`}
                   >
                     {isEditing ? (
-                      <td colSpan={6} className="bg-[var(--color-surface)] px-4 py-4">
+                      <td colSpan={7} className="bg-[var(--color-surface)] px-4 py-4">
                         <ProductForm
                           product={product}
                           disabled={isPending}
@@ -165,6 +169,19 @@ export function CatalogManager({ products }: { products: Product[] }) {
                         </td>
                         <td className="px-4 py-3 text-[var(--color-muted)]">
                           {CATEGORY_LABELS[product.category]}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-xs ${
+                              product.station === "cocina"
+                                ? "bg-[var(--color-busy)]/15 text-[var(--color-busy)]"
+                                : product.station === "barra"
+                                  ? "bg-[var(--color-accent)]/15 text-[var(--color-accent)]"
+                                  : "bg-[var(--color-surface-2)] text-[var(--color-muted)]"
+                            }`}
+                          >
+                            {STATION_LABELS[product.station]}
+                          </span>
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums">
                           {formatMoney(product.price)}
@@ -228,10 +245,17 @@ export function CatalogManager({ products }: { products: Product[] }) {
         </table>
       </div>
 
-      <p className="mt-3 text-xs text-[var(--color-muted)]">
-        Al quitar un producto que ya se vendió, no se borra: queda fuera de venta
-        para no romper el histórico de cuentas.
-      </p>
+      <div className="mt-3 grid gap-1 text-xs text-[var(--color-muted)]">
+        <p>
+          Al quitar un producto que ya se vendió, no se borra: queda fuera de
+          venta para no romper el histórico de cuentas.
+        </p>
+        <p>
+          La <strong>estación</strong> decide a qué pantalla va la comanda.
+          «Sin comanda» es para lo que se cobra sin que nadie lo prepare, como la
+          hora de pool. Cambiarla no mueve las comandas que ya están en curso.
+        </p>
+      </div>
     </main>
   );
 }
@@ -277,6 +301,21 @@ function ProductForm({
           {CATEGORIES.map((c) => (
             <option key={c} value={c}>
               {CATEGORY_LABELS[c]}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="grid gap-1">
+        <span className="text-xs text-[var(--color-muted)]">Estación</span>
+        <select
+          name="station"
+          defaultValue={product?.station ?? "barra"}
+          className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+        >
+          {STATIONS.map((st) => (
+            <option key={st} value={st}>
+              {STATION_LABELS[st]}
             </option>
           ))}
         </select>

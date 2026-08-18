@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { playBeep } from "@/lib/beep";
 import { resolveAlert } from "../actions";
 import { ALERT_LABELS, type Alert } from "@/lib/types";
 
@@ -44,31 +45,9 @@ export function AlertMonitor({ initialAlerts, tableNumbers }: Props) {
     return () => clearInterval(id);
   }, []);
 
-  /** Chirrido corto. Detrás de la barra hay ruido: la alerta visual no alcanza. */
   const beep = useCallback(() => {
     if (mutedRef.current) return;
-    try {
-      const Ctx =
-        window.AudioContext ??
-        (window as unknown as { webkitAudioContext: typeof AudioContext })
-          .webkitAudioContext;
-      const ctx = new Ctx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(880, ctx.currentTime);
-      osc.frequency.setValueAtTime(1320, ctx.currentTime + 0.12);
-      gain.gain.setValueAtTime(0.0001, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.36);
-      osc.onended = () => void ctx.close();
-    } catch {
-      // Si el navegador bloquea el audio hasta la primera interacción, da igual:
-      // la alerta visual sigue apareciendo.
-    }
+    playBeep();
   }, []);
 
   useEffect(() => {

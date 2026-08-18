@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { FloorTable } from "./floor-table";
+import { CANVAS_H, CANVAS_W } from "@/lib/floor";
 import {
   addProductToTable,
   changeItemQuantity,
@@ -15,11 +18,21 @@ import {
 import {
   CATEGORY_LABELS,
   formatMoney,
+  PAYMENT_LABELS,
+  PAYMENT_METHODS,
+  type PaymentMethod,
   type AlertType,
+  type OrderItemWithProduct,
   type Product,
   type ProductCategory,
+  type Sector,
   type TableDetail,
 } from "@/lib/types";
+
+/** Líneas que todavía esperan a la barra o a la cocina. */
+function pendientesDe(items: OrderItemWithProduct[]): number {
+  return items.filter((i) => i.status !== "listo").length;
+}
 
 type Props = {
   tables: TableDetail[];
@@ -29,6 +42,9 @@ type Props = {
   currentUserId: string;
   /** id de mesa → tipos de alerta pendientes. */
   pendingAlerts: Record<string, AlertType[]>;
+  /** Sin turno de caja abierto no se puede cobrar. */
+  hasOpenShift: boolean;
+  sectors: Sector[];
 };
 
 const CATEGORIES: ProductCategory[] = ["bebida", "comida", "otro"];
@@ -39,10 +55,39 @@ export function SalonBoard({
   waiters,
   currentUserId,
   pendingAlerts,
+  hasOpenShift,
+  sectors,
 }: Props) {
   const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Mesas que quedaron sin sector: mejor una pestaña de más que una mesa que
+  // no aparece en ninguna pantalla.
+  const huerfanas = tables.some((t) => t.table.sector_id === null);
+  const tabs: { id: string | null; name: string }[] = [
+    ...sectors.map((s) => ({ id: s.id as string | null, name: s.name })),
+    ...(huerfanas ? [{ id: null, name: "Sin sector" }] : []),
+  ];
+
+  const [sectorId, setSectorId] = useState<string | null>(
+    tabs[0]?.id ?? null
+  );
+
+  // El plano se guarda en unidades fijas y cada pantalla lo escala a su ancho:
+  // el mismo salón se ve igual en el monitor de la caja y en la tablet.
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      setScale(Math.min(1, entry.contentRect.width / CANVAS_W));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const selected = useMemo(
     () => tables.find((t) => t.table.id === selectedId) ?? null,
@@ -86,6 +131,7 @@ export function SalonBoard({
 
   const ocupadas = tables.filter((t) => t.table.status === "ocupada").length;
   const enSalon = tables.reduce((sum, t) => sum + (t.order?.total ?? 0), 0);
+  const conComanda = tables.filter((t) => pendientesDe(t.items) > 0).length;
 
   return (
     <>
@@ -95,6 +141,12 @@ export function SalonBoard({
             <h1 className="text-2xl font-semibold">Salón</h1>
             <p className="text-sm text-[var(--color-muted)]">
               {ocupadas} de {tables.length} mesas ocupadas
+              {conComanda > 0 ? (
+                <span className="text-[var(--color-accent)]">
+                  {" · "}
+                  {conComanda} con comanda pendiente
+                </span>
+              ) : null}
             </p>
           </div>
           <div className="text-right">
@@ -116,25 +168,83 @@ export function SalonBoard({
           </p>
         ) : null}
 
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-          {tables.map((detail) => (
-            <li key={detail.table.id}>
-              <TableCard
-                detail={detail}
-                waiterName={
-                  detail.table.assigned_waiter
-                    ? waiters[detail.table.assigned_waiter]
-                    : undefined
-                }
-                alerts={pendingAlerts[detail.table.id] ?? []}
-                onSelect={() => {
-                  setError(null);
-                  setSelectedId(detail.table.id);
-                }}
-              />
-            </li>
-          ))}
-        </ul>
+        {!hasOpenShift ? (
+          // Se avisa acá y no recién al cobrar: enterarse con la mesa esperando
+          // y el ticket en la mano es la peor forma de descubrirlo.
+          <p className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-[var(--color-busy)]/40 bg-[var(--color-busy)]/10 px-3 py-2 text-sm text-[var(--color-busy)]">
+            La caja está cerrada: se puede tomar pedidos, pero no cobrar.
+            <Link
+              href="/admin/caja"
+              className="rounded-lg border border-[var(--color-busy)]/60 px-2.5 py-1 font-medium transition-colors hover:bg-[var(--color-busy)]/20"
+            >
+              Abrir caja
+            </Link>
+          </p>
+        ) : null}
+
+        {tabs.length > 1 ? (
+          <div className="mb-3 flex flex-wrap items-center gap-1">
+            {tabs.map((tab) => {
+              const cuantas = tables.filter(
+                (t) => t.table.sector_id === tab.id
+              ).length;
+
+              return (
+                <button
+                  key={tab.id ?? "sin-sector"}
+                  type="button"
+                  onClick={() => setSectorId(tab.id)}
+                  className={`rounded-lg px-3 py-1.5 text-sm transition-colors ${
+                    tab.id === sectorId
+                      ? "bg-[var(--color-surface-2)] text-[var(--color-ink)]"
+                      : "text-[var(--color-muted)] hover:text-[var(--color-ink)]"
+                  }`}
+                >
+                  {tab.name}
+                  <span className="ml-1.5 text-xs text-[var(--color-muted)]">
+                    {cuantas}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+
+        <div
+          ref={wrapRef}
+          // El escalado es una transformación y no encoge la caja: sin fijarle
+          // la altura, el plano deja un hueco enorme debajo.
+          style={{ height: CANVAS_H * scale }}
+          className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]"
+        >
+          <div
+            className="relative origin-top-left"
+            style={{
+              width: CANVAS_W,
+              height: CANVAS_H,
+              transform: `scale(${scale})`,
+            }}
+          >
+            {tables
+              .filter((detail) => detail.table.sector_id === sectorId)
+              .map((detail) => (
+                <FloorTableCard
+                  key={detail.table.id}
+                  detail={detail}
+                  waiterName={
+                    detail.table.assigned_waiter
+                      ? waiters[detail.table.assigned_waiter]
+                      : undefined
+                  }
+                  alerts={pendingAlerts[detail.table.id] ?? []}
+                  onSelect={() => {
+                    setError(null);
+                    setSelectedId(detail.table.id);
+                  }}
+                />
+              ))}
+          </div>
+        </div>
       </main>
 
       {selected ? (
@@ -148,6 +258,7 @@ export function SalonBoard({
               : undefined
           }
           isMine={selected.table.assigned_waiter === currentUserId}
+          hasOpenShift={hasOpenShift}
           onClose={() => setSelectedId(null)}
           onError={setError}
         />
@@ -158,7 +269,7 @@ export function SalonBoard({
 
 // ---------------------------------------------------------------------------
 
-function TableCard({
+function FloorTableCard({
   detail,
   waiterName,
   alerts,
@@ -171,51 +282,51 @@ function TableCard({
 }) {
   const { table, order, items } = detail;
   const ocupada = table.status === "ocupada";
-  const unidades = items.reduce((n, i) => n + i.quantity, 0);
+  // Tres estados por color, como los ve el encargado de lejos: libre, abierta,
+  // y abierta con algo que barra o cocina todavía no entregaron.
+  const pendientes = pendientesDe(items);
+
+  const tono = !ocupada
+    ? "border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-muted)] hover:border-[var(--color-free)]"
+    : pendientes > 0
+      ? "border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-[var(--color-ink)]"
+      : "border-[var(--color-busy)] bg-[var(--color-busy)]/15 text-[var(--color-ink)]";
 
   return (
-    <button
-      type="button"
+    <FloorTable
+      table={table}
+      label={`Mesa ${table.number}`}
+      title={
+        waiterName ? `Mesa ${table.number} · atiende ${waiterName}` : undefined
+      }
+      className={`cursor-pointer transition-all hover:brightness-125 ${tono}`}
       onClick={onSelect}
-      className={`relative flex h-full w-full flex-col items-start gap-1 rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 ${
-        ocupada
-          ? "border-[var(--color-busy)]/50 bg-[var(--color-busy)]/10 hover:border-[var(--color-busy)]"
-          : "border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-free)]/60"
-      }`}
     >
       {alerts.length > 0 ? (
-        <span
-          aria-label="Mesa con llamado pendiente"
-          className="absolute -top-1.5 -right-1.5 flex size-6 items-center justify-center rounded-full bg-[var(--color-danger)] text-xs font-bold text-white"
-        >
-          <span className="absolute inset-0 animate-ping rounded-full bg-[var(--color-danger)]/60" />
-          <span className="relative">{alerts.length}</span>
+        <span className="mb-0.5 flex items-center gap-1 rounded-full bg-[var(--color-danger)] px-1.5 text-[10px] font-bold text-white">
+          <span className="inline-block size-1.5 animate-ping rounded-full bg-white" />
+          {alerts.length}
         </span>
       ) : null}
 
-      <div className="flex w-full items-center justify-between">
-        <span className="text-2xl font-semibold tabular-nums">{table.number}</span>
-        <span
-          className={`size-2.5 rounded-full ${
-            ocupada ? "bg-[var(--color-busy)]" : "bg-[var(--color-free)]"
-          }`}
-        />
-      </div>
+      <span className="text-xl leading-none font-bold tabular-nums">
+        {table.number}
+      </span>
 
       {ocupada && order ? (
-        <>
-          <span className="text-lg font-medium tabular-nums">
-            {formatMoney(order.total)}
-          </span>
-          <span className="text-xs text-[var(--color-muted)]">
-            {unidades} {unidades === 1 ? "ítem" : "ítems"}
-            {waiterName ? ` · ${waiterName}` : ""}
-          </span>
-        </>
+        <span className="mt-0.5 text-xs font-medium tabular-nums">
+          {formatMoney(order.total)}
+        </span>
       ) : (
-        <span className="text-sm text-[var(--color-muted)]">Libre</span>
+        <span className="mt-0.5 text-[10px] opacity-70">{table.seats} 🪑</span>
       )}
-    </button>
+
+      {pendientes > 0 ? (
+        <span className="mt-0.5 text-[10px] font-medium text-[var(--color-accent)]">
+          {pendientes} sin entregar
+        </span>
+      ) : null}
+    </FloorTable>
   );
 }
 
@@ -226,6 +337,7 @@ function TablePanel({
   products,
   waiterName,
   isMine,
+  hasOpenShift,
   onClose,
   onError,
 }: {
@@ -233,6 +345,7 @@ function TablePanel({
   products: Product[];
   waiterName?: string;
   isMine: boolean;
+  hasOpenShift: boolean;
   onClose: () => void;
   onError: (msg: string | null) => void;
 }) {
@@ -269,6 +382,15 @@ function TablePanel({
 
   const total = order?.total ?? 0;
   const unidades = items.reduce((n, i) => n + i.quantity, 0);
+
+  function cobrar(method: PaymentMethod) {
+    if (!order) return;
+    run(async () => {
+      const result = await closeOrder(order.id, method);
+      if (!result.error) onClose();
+      return result;
+    });
+  }
 
   return (
     <div className="fixed inset-0 z-40 flex justify-end">
@@ -331,8 +453,23 @@ function TablePanel({
                   className="flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-[var(--color-surface)]"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm">
+                    <p className="flex items-center gap-2 truncate text-sm">
                       {item.product?.name ?? "Producto eliminado"}
+                      {item.status !== "listo" ? (
+                        <span
+                          className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] tracking-wide uppercase ${
+                            item.status === "preparando"
+                              ? "bg-[var(--color-busy)]/20 text-[var(--color-busy)]"
+                              : "bg-[var(--color-surface-2)] text-[var(--color-muted)]"
+                          }`}
+                        >
+                          {item.status === "pedido"
+                            ? "pedido"
+                            : item.station === "cocina"
+                              ? "en cocina"
+                              : "en barra"}
+                        </span>
+                      ) : null}
                     </p>
                     <p className="text-xs text-[var(--color-muted)] tabular-nums">
                       {item.quantity} × {formatMoney(item.unit_price)}
@@ -484,31 +621,37 @@ function TablePanel({
               </button>
             )
           ) : confirmingClose ? (
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid gap-2">
+              <p className="text-center text-sm text-[var(--color-muted)]">
+                {isPending ? "Cobrando…" : "¿Con qué paga?"}
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {PAYMENT_METHODS.map((method) => (
+                  <button
+                    key={method}
+                    type="button"
+                    disabled={isPending}
+                    onClick={() => cobrar(method)}
+                    className={`rounded-xl px-4 py-3.5 text-sm font-semibold disabled:opacity-50 ${
+                      method === "efectivo"
+                        ? "bg-[var(--color-free)] text-[#04140a]"
+                        : "border border-[var(--color-border)] transition-colors hover:border-[var(--color-free)]"
+                    }`}
+                  >
+                    {PAYMENT_LABELS[method]}
+                  </button>
+                ))}
+              </div>
               <button
                 type="button"
                 onClick={() => setConfirmingClose(false)}
                 disabled={isPending}
-                className="rounded-xl border border-[var(--color-border)] px-4 py-3.5 text-sm disabled:opacity-50"
+                className="rounded-xl px-4 py-2.5 text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)] disabled:opacity-50"
               >
                 Cancelar
               </button>
-              <button
-                type="button"
-                disabled={isPending}
-                onClick={() =>
-                  run(async () => {
-                    const result = await closeOrder(order.id);
-                    if (!result.error) onClose();
-                    return result;
-                  })
-                }
-                className="rounded-xl bg-[var(--color-free)] px-4 py-3.5 font-semibold text-[#04140a] disabled:opacity-50"
-              >
-                {isPending ? "Cobrando…" : `Confirmar ${formatMoney(total)}`}
-              </button>
             </div>
-          ) : (
+          ) : hasOpenShift ? (
             <button
               type="button"
               disabled={isPending}
@@ -517,6 +660,19 @@ function TablePanel({
             >
               Cobrar y cerrar mesa
             </button>
+          ) : (
+            <div className="grid gap-2">
+              <button
+                type="button"
+                disabled
+                className="w-full cursor-not-allowed rounded-xl bg-[var(--color-surface-2)] px-4 py-3.5 font-semibold text-[var(--color-muted)]"
+              >
+                Cobrar y cerrar mesa
+              </button>
+              <p className="text-center text-xs text-[var(--color-busy)]">
+                Hay que abrir la caja antes de cobrar.
+              </p>
+            </div>
           )}
         </footer>
       </aside>

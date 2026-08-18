@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { requireStaff } from "@/lib/auth";
+import { isPaymentMethod, type PaymentMethod } from "@/lib/types";
 
 export type ActionResult = { error: string | null };
 
@@ -59,11 +60,18 @@ export async function addProductToTable(
 
   if (prodError || !product) return { error: "Producto no encontrado." };
 
+  // Se suma sobre una línea existente solo si la estación todavía no la tomó.
+  // Si el trago ya está en preparación o servido, la unidad nueva va en una
+  // línea aparte: sumando sobre la vieja, la barra nunca se entera de que le
+  // pidieron otro.
   const { data: existing } = await supabase
     .from("order_items")
     .select("id, quantity")
     .eq("order_id", orderId)
     .eq("product_id", productId)
+    .eq("status", "pedido")
+    .order("created_at")
+    .limit(1)
     .maybeSingle();
 
   const { error } = existing
@@ -84,6 +92,7 @@ export async function addProductToTable(
   if (error) return { error: "No se pudo cargar el producto: " + error.message };
 
   revalidatePath("/admin");
+  revalidatePath("/estacion", "layout");
   return OK;
 }
 
@@ -92,16 +101,37 @@ export async function changeItemQuantity(
   itemId: string,
   delta: number
 ): Promise<ActionResult> {
-  await requireStaff();
+  const profile = await requireStaff();
   const supabase = await getSupabaseServerClient();
 
   const { data: item, error: readError } = await supabase
     .from("order_items")
-    .select("id, quantity")
+    .select("id, quantity, status, order_id, product_id, unit_price, unit_cost")
     .eq("id", itemId)
     .single();
 
   if (readError || !item) return { error: "La línea ya no existe." };
+
+  // Sumar sobre una línea que la estación ya preparó la dejaría invisible para
+  // la pantalla: la unidad nueva abre su propia comanda, al mismo precio que
+  // el resto de la vuelta.
+  if (delta > 0 && item.status !== "pedido") {
+    const { error } = await supabase.from("order_items").insert({
+      order_id: item.order_id,
+      product_id: item.product_id,
+      quantity: delta,
+      unit_price: item.unit_price,
+      unit_cost: item.unit_cost,
+      subtotal: 0, // lo calcula el trigger
+      created_by: profile.id,
+    });
+
+    if (error) return { error: "No se pudo cargar el producto: " + error.message };
+
+    revalidatePath("/admin");
+    revalidatePath("/estacion", "layout");
+    return OK;
+  }
 
   const next = item.quantity + delta;
 
@@ -116,6 +146,7 @@ export async function changeItemQuantity(
   if (error) return { error: "No se pudo actualizar: " + error.message };
 
   revalidatePath("/admin");
+  revalidatePath("/estacion", "layout");
   return OK;
 }
 
@@ -128,21 +159,45 @@ export async function removeItem(itemId: string): Promise<ActionResult> {
   if (error) return { error: "No se pudo quitar: " + error.message };
 
   revalidatePath("/admin");
+  revalidatePath("/estacion", "layout");
   return OK;
 }
 
-/** Cobra la cuenta: cierra, libera la mesa y resuelve sus alertas. */
-export async function closeOrder(orderId: string): Promise<ActionResult> {
+/**
+ * Cobra la cuenta: cierra, libera la mesa y resuelve sus alertas.
+ *
+ * La venta queda pegada al turno de caja abierto. Sin turno no se cobra: una
+ * venta sin caja abierta no cae en ningún arqueo y el cierre del día deja de
+ * cerrar. El tablero del salón avisa antes de que alguien llegue hasta acá.
+ */
+export async function closeOrder(
+  orderId: string,
+  paymentMethod: PaymentMethod
+): Promise<ActionResult> {
   await requireStaff();
+
+  if (!isPaymentMethod(paymentMethod)) {
+    return { error: "Medio de pago desconocido." };
+  }
+
   const supabase = await getSupabaseServerClient();
 
   const { error } = await supabase.rpc("close_table_order", {
     p_order_id: orderId,
+    p_payment_method: paymentMethod,
   });
 
-  if (error) return { error: "No se pudo cerrar la cuenta: " + error.message };
+  if (error) {
+    if (error.message.includes("turno de caja")) {
+      return {
+        error: "No hay un turno de caja abierto. Abrí la caja antes de cobrar.",
+      };
+    }
+    return { error: "No se pudo cerrar la cuenta: " + error.message };
+  }
 
   revalidatePath("/admin");
+  revalidatePath("/estacion", "layout");
   return OK;
 }
 

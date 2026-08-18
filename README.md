@@ -15,8 +15,12 @@ Ejecutar **en este orden**:
 | 2 | [`supabase/seed.sql`](supabase/seed.sql) | 12 mesas + catálogo de arranque |
 | 3 | [`supabase/002_auth.sql`](supabase/002_auth.sql) | Perfiles de mozos, roles y RLS definitiva |
 | 4 | [`supabase/003_pool.sql`](supabase/003_pool.sql) | Bitácora de mesas de pool y tarifa horaria |
+| 5 | [`supabase/004_estaciones.sql`](supabase/004_estaciones.sql) | Estaciones (barra / cocina) y estado por ítem |
+| 6 | [`supabase/005_caja.sql`](supabase/005_caja.sql) | Medios de pago, turnos de caja y arqueo |
+| 7 | [`supabase/006_reportes.sql`](supabase/006_reportes.sql) | Funciones de reporte de ventas |
+| 8 | [`supabase/007_salon.sql`](supabase/007_salon.sql) | Sectores y plano del salón |
 
-Los tres son idempotentes: se pueden volver a correr sin romper nada.
+Todos son idempotentes: se pueden volver a correr sin romper nada.
 
 ### 2. Crear el primer usuario
 
@@ -71,6 +75,11 @@ Tres niveles, aplicados por la base de datos (RLS), no solo por la interfaz:
 | Crear alertas (`llamar_mozo` / `pedir_cuenta`) | ✅ | ✅ | ✅ |
 | Ver / resolver alertas | ver | ✅ | ✅ |
 | Ver y operar cuentas (`orders`, `order_items`) | ❌ | ✅ | ✅ |
+| Pantallas de barra y cocina (`/estacion`) | ❌ | ✅ | ✅ |
+| Abrir la caja | ❌ | ✅ | ✅ |
+| Cerrar la caja y arquear | ❌ | ❌ | ✅ |
+| Reportes y exportación | ❌ | ❌ | ✅ |
+| Editar el plano del salón | ❌ | ❌ | ✅ |
 | Editar catálogo (precios y costos) | ❌ | ❌ | ✅ |
 | Gestionar usuarios | ❌ | ❌ | ✅ |
 
@@ -80,6 +89,120 @@ Detalles que conviene tener presentes:
 - `proxy.ts` valida la sesión con `getUser()` (verifica el token contra Supabase) en vez de `getSession()`, que solo lee una cookie falsificable.
 - `active = false` en un perfil revoca todos los permisos sin borrar el historial de ventas.
 - La `service_role` queda reservada para el webhook de hardware (Fase 4), donde no hay usuario humano.
+
+## Barra y cocina
+
+El mozo carga *dos negronis y una picada* en la mesa y el sistema reparte solo:
+los negronis aparecen en **/estacion/barra**, la picada en **/estacion/cocina**.
+Cada pantalla ve únicamente lo suyo.
+
+Se abre una vez por monitor, con el usuario de un mozo, y se deja puesta. El
+botón ⛶ la pone en pantalla completa. El 🔊 avisa con un chirrido cada vez que
+entra una comanda nueva, más grave que el de las alertas del salón para que en
+la barra se distinga un pedido de un llamado de mesa.
+
+**Quién prepara qué lo define el catálogo.** Cada producto tiene su estación en
+`/admin/catalogo`:
+
+| Estación | Para qué |
+|---|---|
+| `barra` | Tragos, cerveza, refrescos |
+| `cocina` | Picadas, hamburguesas, todo lo que se cocina |
+| `ninguna` | Lo que se cobra sin que nadie lo prepare: la hora de pool, un descorche |
+
+Lo marcado como `ninguna` no genera comanda: nace listo y no aparece en ninguna
+pantalla.
+
+**Cada línea avanza `pedido` → `preparando` → `listo`.** Se puede saltar directo
+a listo (un trago que se sirve al toque) y se puede volver atrás, que es lo que
+salva un toque de más. Lo ya marcado como listo sigue visible 20 minutos para
+poder deshacerlo sin ir a buscar a la caja.
+
+Una comanda que lleva más de **8 minutos** esperando se marca en ámbar; pasados
+**15**, en rojo y parpadeando. Los umbrales están en `lib/types.ts`
+(`ITEM_WARN_MINUTES` / `ITEM_LATE_MINUTES`).
+
+En el salón, la mesa queda en **celeste** mientras tenga algo sin entregar, en
+ámbar cuando está abierta con todo entregado, y sin color cuando está libre.
+
+## El plano del salón
+
+En **/admin/salon** el encargado arrastra cada mesa al lugar donde está
+físicamente. El plano que queda es el que ve la caja en `/admin`, con los
+colores de estado encima.
+
+→ Sectores en pestañas: salón, terraza, planta alta, lo que el bar tenga
+→ Cada mesa con forma (redonda, cuadrada, rectangular), tamaño, rotación y
+  cantidad de sillas
+→ Arrastrar con el mouse o el dedo; con la mesa elegida, las flechas la mueven
+  de a diez, y con Shift de a cincuenta
+→ Alta y baja de mesas, y cambio de sector desde el panel
+
+**Por qué plano libre y no grilla.** Los sistemas de plaza ponen las mesas en
+una cuadrícula de celdas iguales. Es más ordenado y no se puede hacer feo, pero
+no representa la mesa larga contra la ventana ni la redonda de seis del rincón.
+El pedido acá era que el plano se parezca al salón real, así que las posiciones
+son libres y se pegan a una grilla de 10 para que dos mesas juntas queden
+derechas.
+
+**Las sillas no son objetos.** Se guarda cuántas tiene cada mesa y se dibujan
+alrededor, repartidas por el contorno si es redonda y caminando el perímetro si
+tiene lados. Sesenta sillas sueltas para doce mesas se ven igual en pantalla y
+hay que reacomodarlas a mano cada vez que se mueve una mesa. Si algún día hacen
+falta de verdad, se agrega una tabla de sillas con su desplazamiento respecto de
+la mesa: es aditivo, no hay que rehacer el plano.
+
+**Las medidas son fijas.** El plano vive en un lienzo de 1400×900 y cada
+pantalla lo escala a su ancho. Así el mismo salón se ve igual en el monitor de
+la caja y en la tablet del mozo, y mover una mesa no depende del tamaño de la
+pantalla desde la que se movió.
+
+**El permiso vive en un RPC, no en la policy.** `tables` tiene policy de
+personal porque el mozo necesita abrir y cerrar mesas; el candado de admin va en
+`save_table_layout`, donde se puede distinguir mover una mesa de ocuparla.
+
+## Caja, turnos y arqueo
+
+Cobrar exige **un turno de caja abierto**. Sin turno, una venta no cae en ningún
+arqueo y el cierre del día deja de cerrar, así que la base directamente no lo
+permite. El tablero del salón avisa antes con un cartel y el botón de cobrar
+queda apagado: nadie se entera con la mesa esperando y el ticket en la mano.
+
+En **/admin/caja**:
+
+1. **Abrir el turno** declarando el fondo de cambio. Lo puede hacer cualquiera
+   del personal — si dependiera del encargado, un sábado sin él nadie podría
+   cobrar.
+2. Durante el turno se ve lo vendido, abierto por medio de pago, y cuánto
+   efectivo debería haber en el cajón: *fondo + ventas en efectivo*.
+3. **Cerrar y arquear**: se cuenta la caja, se escribe el número, y el sistema
+   deja registrada la diferencia. Solo el encargado.
+
+Cada cuenta se cobra con **un medio de pago** —efectivo, débito, crédito,
+transferencia u otro— y queda pegada al turno que estaba abierto. El esperado se
+congela al cerrar: corregir una cuenta vieja no reescribe un arqueo ya firmado.
+
+## Reportes
+
+**/admin/reportes**, solo admin. Se elige el período y se ve venta total,
+tickets, ticket promedio y unidades, más la apertura por medio de pago, por
+franja horaria, por día de la semana, y el ranking de más y menos vendidos —
+incluida la lista de lo que **no vendió una sola unidad** en el período, que es
+la que sirve para sacar cosas de la carta.
+
+Todo se agrega en la base (`supabase/006_reportes.sql`). Traer las líneas crudas
+para sumarlas en JavaScript funciona el primer mes y se cae solo el día que el
+bar lleve un año de ventas. Lo horario se calcula en hora de Montevideo: si no,
+una venta de la una de la mañana del sábado aparece como domingo.
+
+**Exportación:** botones que bajan CSV con punto y coma y coma decimal, que es
+lo que Excel en español abre de un doble clic sin pasar por el asistente de
+importación. Si el contador necesita `.xlsx` nativo hay que sumar una librería;
+avisar antes de prometerlo.
+
+Los reportes son de **venta**: cuánto salió de cada cosa, cuándo y cómo se pagó.
+No calculan rentabilidad por trago, porque el costo cargado es el del catálogo y
+no el de la última compra al proveedor.
 
 ## Los códigos QR de las mesas
 
@@ -145,6 +268,12 @@ No dependen de la interfaz — las garantiza Postgres:
 - **Precio y costo se congelan** en `order_items` al momento de la venta: cambiar el precio de un producto no altera las cuentas históricas.
 - **Abrir y cerrar mesa son atómicos** (`open_table_order` / `close_table_order`): cuenta, estado de la mesa y alertas se mueven juntos o no se mueven.
 - **Una mesa abierta por error se puede liberar** sin cobrar, solo mientras no tenga consumos. La cuenta vacía se borra en vez de cobrarse en $0, para no dejar tickets fantasma en el histórico.
+- **La estación se congela en la línea** al momento de la venta, igual que el precio: mover un producto de barra a cocina no hace saltar de pantalla las comandas que ya están en curso.
+- **Pedir otra unidad de algo ya preparado abre una línea nueva.** Sumar sobre la vieja dejaría el pedido invisible para la estación, que ya la había dado por cerrada.
+- **Sin turno de caja abierto no se cobra**, y hay **un solo turno abierto a la vez** (índice único parcial).
+- **El arqueo se congela al cerrar**: el esperado queda guardado calculado, no se recalcula al mirarlo.
+- **Una mesa que ya facturó no se borra.** La baja se rechaza con un mensaje claro en vez de llevarse puesto el histórico de ventas.
+- **Un sector con mesas adentro no se borra**: primero hay que moverlas, o desaparecerían del plano sin que nadie entienda a dónde fueron.
 
 ## Estructura
 
@@ -154,10 +283,23 @@ app/
   login/                  Ingreso de mozos (Server Action + Supabase Auth)
   admin/
     layout.tsx            Guard de sesión + navegación + monitor de alertas
+    salon/
+      page.tsx            Editor del plano (solo admin)
+      floor-editor.tsx    Arrastrar mesas, sectores y propiedades
+      actions.ts          Guardar plano, alta/baja de mesas y sectores
+    caja/
+      page.tsx            Turno abierto, resumen por medio de pago e historial
+      caja-client.tsx     Abrir turno, arqueo y cierre
+      actions.ts          openShift() / closeShift()
+    reportes/
+      page.tsx            Reportes por período (solo admin)
+      data.ts             Rango del período y llamadas a las funciones de la base
+      export/route.ts     Descarga CSV para el contador
     page.tsx              Dashboard de salón (mesas + panel de carga)
     actions.ts            Abrir mesa, cargar productos, cobrar, resolver alertas
     _components/
-      salon-board.tsx     Cuadrícula de mesas y panel lateral
+      salon-board.tsx     Plano del salón por sector y panel lateral
+      floor-table.tsx     Dibujo de una mesa con sus sillas, compartido
       alert-monitor.tsx   Alertas en tiempo real (WebSocket)
     catalogo/
       page.tsx            ABM de productos (solo admin)
@@ -168,10 +310,19 @@ app/
     page.tsx              Web del cliente — llega escaneando el QR
     table-client.tsx      Botones de llamado + estado en vivo
     actions.ts            Inserta la alerta (sin sesión, vía RLS de anon)
+  estacion/
+    layout.tsx            Chrome mínimo, sin la barra de alertas del salón
+    page.tsx              Elegir pantalla (barra / cocina)
+    actions.ts            Avanzar y deshacer el estado de una comanda
+    [station]/
+      page.tsx            Comandas de la estación, agrupadas por mesa
+      station-board.tsx   Tablero en vivo, relojes de espera y avisos
   api/pool-webhook/
     route.ts              Puente para el lector RFID de las mesas de pool
 lib/
   auth.ts                 requireStaff() / requireAdmin()
+  beep.ts                 Chirrido por Web Audio, compartido por las pantallas
+  floor.ts                Medidas del plano, grilla y posición de las sillas
   types.ts                Tipos del dominio + formato de moneda (UYU)
   supabase/client.ts      Cliente de navegador (sesión por cookie, Realtime)
   supabase/server.ts      Cliente de servidor con la sesión del mozo
@@ -181,4 +332,9 @@ supabase/
   schema.sql              Tablas, triggers, RPC, Realtime
   seed.sql                Mesas y catálogo de prueba
   002_auth.sql            Perfiles, roles y RLS definitiva
+  003_pool.sql            Bitácora de pool y tarifa horaria
+  004_estaciones.sql      Estaciones y estado por ítem
+  005_caja.sql            Medios de pago, turnos y arqueo
+  006_reportes.sql        Funciones de reporte
+  007_salon.sql           Sectores y plano del salón
 ```

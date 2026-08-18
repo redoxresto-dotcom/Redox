@@ -9,6 +9,7 @@ import type {
   OrderItemWithProduct,
   Product,
   Profile,
+  Sector,
   TableDetail,
 } from "@/lib/types";
 
@@ -20,7 +21,15 @@ export default async function SalonPage() {
   const profile = await requireStaff();
   const supabase = await getSupabaseServerClient();
 
-  const [tablesRes, ordersRes, productsRes, waitersRes, alertsRes] =
+  const [
+    tablesRes,
+    ordersRes,
+    productsRes,
+    waitersRes,
+    alertsRes,
+    shiftRes,
+    sectorsRes,
+  ] =
     await Promise.all([
       supabase.from("tables").select("*").order("number"),
       supabase
@@ -35,6 +44,12 @@ export default async function SalonPage() {
         .order("name"),
       supabase.from("profiles").select("id, full_name"),
       supabase.from("alerts").select("*").eq("status", "pendiente"),
+      supabase
+        .from("cash_shifts")
+        .select("id")
+        .is("closed_at", null)
+        .maybeSingle(),
+      supabase.from("sectors").select("*").order("sort_order").order("name"),
     ]);
 
   const tables = (tablesRes.data ?? []) as BarTable[];
@@ -81,6 +96,8 @@ export default async function SalonPage() {
       waiters={waiters}
       currentUserId={profile.id}
       pendingAlerts={pendingAlerts}
+      hasOpenShift={Boolean(shiftRes.data)}
+      sectors={(sectorsRes.data ?? []) as Sector[]}
     />
   );
 }

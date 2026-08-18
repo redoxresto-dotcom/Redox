@@ -46,6 +46,24 @@ export default async function AdminLayout({
             >
               Salón
             </Link>
+            <Link
+              href="/estacion/barra"
+              className="rounded-lg px-3 py-1.5 text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-ink)]"
+            >
+              Barra
+            </Link>
+            <Link
+              href="/estacion/cocina"
+              className="rounded-lg px-3 py-1.5 text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-ink)]"
+            >
+              Cocina
+            </Link>
+            <Link
+              href="/admin/caja"
+              className="rounded-lg px-3 py-1.5 text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-ink)]"
+            >
+              Caja
+            </Link>
             {profile.role === "admin" ? (
               <>
                 <Link
@@ -53,6 +71,18 @@ export default async function AdminLayout({
                   className="rounded-lg px-3 py-1.5 text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-ink)]"
                 >
                   Catálogo
+                </Link>
+                <Link
+                  href="/admin/salon"
+                  className="rounded-lg px-3 py-1.5 text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-ink)]"
+                >
+                  Plano
+                </Link>
+                <Link
+                  href="/admin/reportes"
+                  className="rounded-lg px-3 py-1.5 text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-ink)]"
+                >
+                  Reportes
                 </Link>
                 <Link
                   href="/admin/qr"

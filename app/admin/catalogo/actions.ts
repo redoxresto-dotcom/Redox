@@ -3,20 +3,31 @@
 import { revalidatePath } from "next/cache";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
-import type { ProductCategory } from "@/lib/types";
+import type { ProductCategory, Station } from "@/lib/types";
 
 export type CatalogResult = { error: string | null };
 
 const CATEGORIES: ProductCategory[] = ["bebida", "comida", "otro"];
+const STATIONS: Station[] = ["barra", "cocina", "ninguna"];
 
 /** Valida y normaliza lo que llega del formulario. */
 function parseForm(formData: FormData):
-  | { ok: true; values: { name: string; price: number; cost: number; category: ProductCategory } }
+  | {
+      ok: true;
+      values: {
+        name: string;
+        price: number;
+        cost: number;
+        category: ProductCategory;
+        station: Station;
+      };
+    }
   | { ok: false; error: string } {
   const name = String(formData.get("name") ?? "").trim();
   const price = Number(formData.get("price"));
   const cost = Number(formData.get("cost") ?? 0);
   const category = String(formData.get("category") ?? "bebida") as ProductCategory;
+  const station = String(formData.get("station") ?? "barra") as Station;
 
   if (!name) return { ok: false, error: "El nombre no puede estar vacío." };
   if (!Number.isFinite(price) || price < 0)
@@ -25,8 +36,10 @@ function parseForm(formData: FormData):
     return { ok: false, error: "El costo no es válido." };
   if (!CATEGORIES.includes(category))
     return { ok: false, error: "Categoría desconocida." };
+  if (!STATIONS.includes(station))
+    return { ok: false, error: "Estación desconocida." };
 
-  return { ok: true, values: { name, price, cost, category } };
+  return { ok: true, values: { name, price, cost, category, station } };
 }
 
 function friendlyError(message: string): string {
@@ -49,6 +62,7 @@ export async function createProduct(formData: FormData): Promise<CatalogResult> 
 
   revalidatePath("/admin/catalogo");
   revalidatePath("/admin");
+  revalidatePath("/estacion", "layout");
   return { error: null };
 }
 

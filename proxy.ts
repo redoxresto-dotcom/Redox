@@ -2,8 +2,8 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
- * Refresca el token de Supabase en cada request y cierra el paso a /admin
- * si no hay sesión. Es la única parte de la app que puede escribir las
+ * Refresca el token de Supabase en cada request y cierra el paso a /admin y
+ * a /estacion si no hay sesión. Es la única parte de la app que puede escribir las
  * cookies de sesión, por eso el refresh vive acá.
  *
  * (En Next 16 este archivo reemplaza al viejo middleware.ts.)
@@ -43,7 +43,12 @@ export default async function proxy(request: NextRequest) {
 
   const { pathname, search } = request.nextUrl;
 
-  if (!user && pathname.startsWith("/admin")) {
+  // Las pantallas de barra y cocina son personal, igual que el panel: quedan
+  // detrás del mismo guard.
+  const esPrivada =
+    pathname.startsWith("/admin") || pathname.startsWith("/estacion");
+
+  if (!user && esPrivada) {
     const login = request.nextUrl.clone();
     login.pathname = "/login";
     login.search = "";

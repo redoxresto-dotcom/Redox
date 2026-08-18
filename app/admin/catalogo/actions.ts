@@ -20,6 +20,8 @@ function parseForm(formData: FormData):
         cost: number;
         category: ProductCategory;
         station: Station;
+        description: string | null;
+        in_menu: boolean;
       };
     }
   | { ok: false; error: string } {
@@ -28,6 +30,9 @@ function parseForm(formData: FormData):
   const cost = Number(formData.get("cost") ?? 0);
   const category = String(formData.get("category") ?? "bebida") as ProductCategory;
   const station = String(formData.get("station") ?? "barra") as Station;
+  const description = String(formData.get("description") ?? "").trim();
+  // Checkbox sin marcar no viaja en el formulario.
+  const in_menu = formData.get("in_menu") !== null;
 
   if (!name) return { ok: false, error: "El nombre no puede estar vacío." };
   if (!Number.isFinite(price) || price < 0)
@@ -39,7 +44,18 @@ function parseForm(formData: FormData):
   if (!STATIONS.includes(station))
     return { ok: false, error: "Estación desconocida." };
 
-  return { ok: true, values: { name, price, cost, category, station } };
+  return {
+    ok: true,
+    values: {
+      name,
+      price,
+      cost,
+      category,
+      station,
+      description: description || null,
+      in_menu,
+    },
+  };
 }
 
 function friendlyError(message: string): string {

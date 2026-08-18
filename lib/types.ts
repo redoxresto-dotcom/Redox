@@ -31,8 +31,24 @@ export type Product = {
   cost: number;
   category: ProductCategory;
   station: Station;
+  description: string | null;
+  /** Si se muestra en la carta pública del QR y del sitio. */
+  in_menu: boolean;
   active: boolean;
   created_at: string;
+};
+
+/**
+ * Lo que ve el público. Sale de la vista `menu`, no de `products`: la clave
+ * anónima viaja al navegador de cualquiera que escanee un QR, y el costo de la
+ * mercadería no tiene por qué estar de su lado.
+ */
+export type MenuItem = {
+  id: string;
+  name: string;
+  price: number;
+  description: string | null;
+  category: ProductCategory;
 };
 
 export type Sector = {

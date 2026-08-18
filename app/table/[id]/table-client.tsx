@@ -1,15 +1,23 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { callStaff } from "./actions";
-import type { AlertType } from "@/lib/types";
+import {
+  CATEGORY_LABELS,
+  formatMoney,
+  type AlertType,
+  type MenuItem,
+  type ProductCategory,
+} from "@/lib/types";
 
 type Props = {
   tableId: string;
   tableNumber: number;
   /** Llamados ya pendientes al abrir la página. */
   initialPending: AlertType[];
+  /** La carta, ya filtrada por la vista pública. */
+  menu: MenuItem[];
 };
 
 const BUTTONS: {
@@ -35,11 +43,29 @@ const BUTTONS: {
   },
 ];
 
-export function TableClient({ tableId, tableNumber, initialPending }: Props) {
+export function TableClient({
+  tableId,
+  tableNumber,
+  initialPending,
+  menu,
+}: Props) {
   const [pending, setPending] = useState<AlertType[]>(initialPending);
   const [error, setError] = useState<string | null>(null);
   const [isSending, startTransition] = useTransition();
   const [sendingType, setSendingType] = useState<AlertType | null>(null);
+  const [verCarta, setVerCarta] = useState(false);
+
+  // La carta llega ordenada por categoría; solo hay que agruparla para poder
+  // ponerle un título a cada tramo.
+  const secciones = useMemo(() => {
+    const orden: ProductCategory[] = ["bebida", "comida", "otro"];
+    return orden
+      .map((categoria) => ({
+        categoria,
+        items: menu.filter((i) => i.category === categoria),
+      }))
+      .filter((s) => s.items.length > 0);
+  }, [menu]);
 
   // Cuando el mozo marca el llamado como atendido, el botón vuelve a habilitarse
   // solo: el cliente ve que lo atendieron sin tener que recargar.
@@ -151,11 +177,114 @@ export function TableClient({ tableId, tableNumber, initialPending }: Props) {
         })}
       </div>
 
+      {menu.length > 0 ? (
+        <button
+          type="button"
+          onClick={() => setVerCarta(true)}
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-4 text-lg font-medium active:bg-[var(--color-surface-2)]"
+        >
+          <span aria-hidden className="text-2xl">
+            📖
+          </span>
+          Ver la carta
+        </button>
+      ) : null}
+
+      {verCarta ? (
+        <Carta secciones={secciones} onClose={() => setVerCarta(false)} />
+      ) : null}
+
       <footer className="pt-8 text-center text-xs text-[var(--color-muted)]">
         {pending.length > 0
           ? "Podés guardar el teléfono, ya estamos en camino."
           : "Tocá un botón y un mozo se acerca a tu mesa."}
       </footer>
     </main>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+/**
+ * La carta a pantalla completa.
+ *
+ * Se abre encima de los botones de llamado en vez de empujarlos fuera de la
+ * pantalla: quien abre el QR para pedir la cuenta tiene que seguir teniendo el
+ * botón a un toque.
+ */
+function Carta({
+  secciones,
+  onClose,
+}: {
+  secciones: { categoria: ProductCategory; items: MenuItem[] }[];
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    function onEsc(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onEsc);
+
+    // Sin esto, el fondo se sigue desplazando detrás de la carta en el celular.
+    const previo = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      window.removeEventListener("keydown", onEsc);
+      document.body.style.overflow = previo;
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Carta"
+      className="fixed inset-0 z-50 flex flex-col bg-[var(--color-bg)]"
+    >
+      <header className="sticky top-0 flex items-center gap-3 border-b border-[var(--color-border)] bg-[var(--color-bg)] px-5 py-4">
+        <h2 className="text-2xl font-semibold">Carta</h2>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Cerrar la carta"
+          className="ml-auto rounded-full border border-[var(--color-border)] px-4 py-2 text-sm text-[var(--color-muted)] active:bg-[var(--color-surface)]"
+        >
+          ✕ Cerrar
+        </button>
+      </header>
+
+      <div className="mx-auto w-full max-w-md flex-1 overflow-y-auto px-5 py-4">
+        {secciones.map((seccion) => (
+          <section key={seccion.categoria} className="mb-7">
+            <h3 className="mb-3 text-xs font-medium tracking-[0.2em] text-[var(--color-accent)] uppercase">
+              {CATEGORY_LABELS[seccion.categoria]}
+            </h3>
+
+            <ul className="grid gap-4">
+              {seccion.items.map((item) => (
+                <li key={item.id} className="flex items-baseline gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="leading-tight font-medium">{item.name}</p>
+                    {item.description ? (
+                      <p className="mt-0.5 text-sm leading-snug text-[var(--color-muted)]">
+                        {item.description}
+                      </p>
+                    ) : null}
+                  </div>
+                  <span className="shrink-0 tabular-nums">
+                    {formatMoney(item.price)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+
+        <p className="pb-6 text-center text-xs text-[var(--color-muted)]">
+          Los precios pueden cambiar. Consultá con el mozo por el pool.
+        </p>
+      </div>
+    </div>
   );
 }

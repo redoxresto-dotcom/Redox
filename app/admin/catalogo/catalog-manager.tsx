@@ -114,6 +114,7 @@ export function CatalogManager({ products }: { products: Product[] }) {
               <th className="px-4 py-2.5 font-medium">Producto</th>
               <th className="px-4 py-2.5 font-medium">Categoría</th>
               <th className="px-4 py-2.5 font-medium">Estación</th>
+              <th className="px-4 py-2.5 font-medium">Carta</th>
               <th className="px-4 py-2.5 text-right font-medium">Venta</th>
               <th className="px-4 py-2.5 text-right font-medium">Costo</th>
               <th className="px-4 py-2.5 text-right font-medium">Margen</th>
@@ -124,7 +125,7 @@ export function CatalogManager({ products }: { products: Product[] }) {
             {visible.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={8}
                   className="px-4 py-10 text-center text-[var(--color-muted)]"
                 >
                   {search ? "Ningún producto coincide." : "El catálogo está vacío."}
@@ -143,7 +144,7 @@ export function CatalogManager({ products }: { products: Product[] }) {
                     }`}
                   >
                     {isEditing ? (
-                      <td colSpan={7} className="bg-[var(--color-surface)] px-4 py-4">
+                      <td colSpan={8} className="bg-[var(--color-surface)] px-4 py-4">
                         <ProductForm
                           product={product}
                           disabled={isPending}
@@ -161,6 +162,11 @@ export function CatalogManager({ products }: { products: Product[] }) {
                       <>
                         <td className="px-4 py-3">
                           {product.name}
+                          {product.description ? (
+                            <span className="block max-w-xs truncate text-xs text-[var(--color-muted)]">
+                              {product.description}
+                            </span>
+                          ) : null}
                           {!product.active ? (
                             <span className="ml-2 rounded bg-[var(--color-surface-2)] px-1.5 py-0.5 text-[10px] tracking-wide uppercase">
                               fuera de venta
@@ -182,6 +188,17 @@ export function CatalogManager({ products }: { products: Product[] }) {
                           >
                             {STATION_LABELS[product.station]}
                           </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {product.in_menu ? (
+                            <span className="text-[var(--color-free)]" title="Se muestra en la carta del QR">
+                              ✓
+                            </span>
+                          ) : (
+                            <span className="text-[var(--color-muted)]" title="No se muestra en la carta">
+                              —
+                            </span>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums">
                           {formatMoney(product.price)}
@@ -249,6 +266,11 @@ export function CatalogManager({ products }: { products: Product[] }) {
         <p>
           Al quitar un producto que ya se vendió, no se borra: queda fuera de
           venta para no romper el histórico de cuentas.
+        </p>
+        <p>
+          Lo que esté marcado como <strong>mostrar en la carta</strong> aparece
+          en el QR de las mesas con su precio y su descripción. La misma carta
+          va a alimentar el sitio web: se cambia acá y cambia en los dos lados.
         </p>
         <p>
           La <strong>estación</strong> decide a qué pantalla va la comanda.
@@ -344,6 +366,28 @@ function ProductForm({
           defaultValue={product?.cost ?? 0}
           className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm tabular-nums outline-none focus:border-[var(--color-accent)]"
         />
+      </label>
+
+      <label className="grid w-full gap-1">
+        <span className="text-xs text-[var(--color-muted)]">
+          Descripción para la carta (opcional)
+        </span>
+        <input
+          name="description"
+          defaultValue={product?.description ?? ""}
+          placeholder="Gin, campari, vermouth rosso"
+          className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+        />
+      </label>
+
+      <label className="flex items-center gap-2 pb-2">
+        <input
+          type="checkbox"
+          name="in_menu"
+          defaultChecked={product?.in_menu ?? true}
+          className="size-4 accent-[var(--color-accent)]"
+        />
+        <span className="text-sm">Mostrar en la carta</span>
       </label>
 
       <div className="flex gap-2">

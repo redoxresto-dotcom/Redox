@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { TableClient } from "./table-client";
-import type { Alert, BarTable } from "@/lib/types";
+import type { Alert, BarTable, MenuItem } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -29,13 +29,20 @@ export default async function TablePage({
 
   const supabase = await getSupabaseServerClient();
 
-  const [tableRes, alertsRes] = await Promise.all([
+  const [tableRes, alertsRes, menuRes] = await Promise.all([
     supabase.from("tables").select("id, number").eq("id", id).maybeSingle(),
     supabase
       .from("alerts")
       .select("type")
       .eq("table_id", id)
       .eq("status", "pendiente"),
+    // De la vista `menu`, no de `products`: es la proyección sin costos, que es
+    // lo único que puede ver alguien sin sesión.
+    supabase
+      .from("menu")
+      .select("id, name, price, description, category")
+      .order("category")
+      .order("name"),
   ]);
 
   const table = tableRes.data as Pick<BarTable, "id" | "number"> | null;
@@ -48,6 +55,7 @@ export default async function TablePage({
       initialPending={((alertsRes.data ?? []) as Pick<Alert, "type">[]).map(
         (a) => a.type
       )}
+      menu={(menuRes.data ?? []) as MenuItem[]}
     />
   );
 }

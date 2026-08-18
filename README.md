@@ -19,6 +19,7 @@ Ejecutar **en este orden**:
 | 6 | [`supabase/005_caja.sql`](supabase/005_caja.sql) | Medios de pago, turnos de caja y arqueo |
 | 7 | [`supabase/006_reportes.sql`](supabase/006_reportes.sql) | Funciones de reporte de ventas |
 | 8 | [`supabase/007_salon.sql`](supabase/007_salon.sql) | Sectores y plano del salón |
+| 9 | [`supabase/008_carta.sql`](supabase/008_carta.sql) | Carta pública y cierre de la filtración de costos |
 
 Todos son idempotentes: se pueden volver a correr sin romper nada.
 
@@ -71,7 +72,8 @@ Tres niveles, aplicados por la base de datos (RLS), no solo por la interfaz:
 | | `anon` (cliente con QR) | `mozo` | `admin` |
 |---|---|---|---|
 | Ver mesas | ✅ | ✅ | ✅ |
-| Ver catálogo activo | ✅ | ✅ | ✅ |
+| Ver la carta pública (vista `menu`) | ✅ | ✅ | ✅ |
+| Leer `products`, con sus costos | ❌ | ✅ | ✅ |
 | Crear alertas (`llamar_mozo` / `pedir_cuenta`) | ✅ | ✅ | ✅ |
 | Ver / resolver alertas | ver | ✅ | ✅ |
 | Ver y operar cuentas (`orders`, `order_items`) | ❌ | ✅ | ✅ |
@@ -124,6 +126,36 @@ Una comanda que lleva más de **8 minutos** esperando se marca en ámbar; pasado
 
 En el salón, la mesa queda en **celeste** mientras tenga algo sin entregar, en
 ámbar cuando está abierta con todo entregado, y sin color cuando está libre.
+
+## La carta del QR
+
+El cliente escanea, toca **Ver la carta** y ve lo mismo que está cargado en la
+caja, agrupado por categoría, con precio y descripción. Se cambia un precio en
+`/admin/catalogo` y cambia en la mesa: no hay una segunda carta que mantener.
+
+En el catálogo, cada producto tiene **mostrar en la carta** y una descripción
+opcional. Lo que no se muestra sigue existiendo para la caja: la tarifa de pool
+—que se cobra prorrateada por minuto y como línea de precio fijo confunde—, un
+descorche, o algo que se dejó de servir pero sigue en el histórico de ventas.
+
+La carta se abre encima de los botones de llamado y no debajo: quien abre el QR
+para pedir la cuenta tiene que seguir teniendo el botón a un toque.
+
+### Por qué hay una vista `menu` y no se lee `products`
+
+La clave anónima de Supabase viaja al navegador de todos los que escanean un
+QR. La RLS filtra **filas**, no **columnas**, así que la policy que dejaba a
+`anon` leer el catálogo le dejaba leer también el **costo** de cada producto.
+Estaba abierto desde la primera versión y se verificó contra la base: devolvía
+los costos.
+
+La 008 lo cierra. `anon` pierde el acceso directo a `products` y en su lugar hay
+una vista `menu` con solo id, nombre, precio, descripción y categoría, filtrada
+por activo y visible. La vista corre con los permisos de su dueño, que es lo que
+permite sacarle a `anon` todo acceso a la tabla.
+
+**Si mañana hay que publicar un dato nuevo del producto, se agrega a la vista.**
+Nunca devolviendo a `anon` la lectura de `products`.
 
 ## El plano del salón
 
@@ -308,7 +340,7 @@ app/
     qr/page.tsx           Códigos QR imprimibles por mesa (solo admin)
   table/[id]/
     page.tsx              Web del cliente — llega escaneando el QR
-    table-client.tsx      Botones de llamado + estado en vivo
+    table-client.tsx      Botones de llamado, estado en vivo y la carta
     actions.ts            Inserta la alerta (sin sesión, vía RLS de anon)
   estacion/
     layout.tsx            Chrome mínimo, sin la barra de alertas del salón
@@ -337,4 +369,5 @@ supabase/
   005_caja.sql            Medios de pago, turnos y arqueo
   006_reportes.sql        Funciones de reporte
   007_salon.sql           Sectores y plano del salón
+  008_carta.sql           Carta pública (vista menu)
 ```

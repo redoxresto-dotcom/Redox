@@ -11,9 +11,10 @@ import {
   changeItemQuantity,
   closeOrder,
   openTable,
-  releaseEmptyTable,
+  releaseTable,
   removeItem,
-  toggleTableAssignment,
+  takeTable,
+  transferTable,
 } from "../actions";
 import {
   CATEGORY_LABELS,
@@ -54,6 +55,13 @@ type Props = {
   sectors: Sector[];
   /** Nivel de quien mira: decide con qué vista arranca la pantalla. */
   role: StaffRole;
+  /**
+   * "salon": las mesas libres más las propias (el encargado ve todas).
+   * "mias": solo las que tomó quien está mirando.
+   */
+  scope?: "salon" | "mias";
+  /** Personal activo al que se le puede pasar una mesa. */
+  staff: { id: string; full_name: string }[];
   /** Motivo por el que la pantalla anterior lo mandó para acá, si lo hubo. */
   notice?: string | null;
 };
@@ -69,6 +77,8 @@ export function SalonBoard({
   hasOpenShift,
   sectors,
   role,
+  scope = "salon",
+  staff,
   notice,
 }: Props) {
   const router = useRouter();
@@ -166,19 +176,36 @@ export function SalonBoard({
     }
   }, [tables, selectedId]);
 
-  const visibles = tables.filter((t) => t.table.sector_id === sectorId);
-  const ocupadas = tables.filter((t) => t.table.status === "ocupada").length;
-  const enSalon = tables.reduce((sum, t) => sum + (t.order?.total ?? 0), 0);
-  const conComanda = tables.filter((t) => pendientesDe(t.items) > 0).length;
+  const esEncargado = hasRank(role, "admin");
+
+  /**
+   * Una mesa tomada desaparece del salón de los demás mozos: dos mozos sobre la
+   * misma mesa es la forma más rápida de duplicar un pedido. El encargado sigue
+   * viendo todo, porque es quien tiene que destrabar cuando algo se traba.
+   */
+  const delTurno = tables.filter(({ table }) => {
+    if (scope === "mias") return table.assigned_waiter === currentUserId;
+    if (esEncargado) return true;
+    return (
+      table.assigned_waiter === null || table.assigned_waiter === currentUserId
+    );
+  });
+
+  const visibles = delTurno.filter((t) => t.table.sector_id === sectorId);
+  const ocupadas = delTurno.filter((t) => t.table.status === "ocupada").length;
+  const enSalon = delTurno.reduce((sum, t) => sum + (t.order?.total ?? 0), 0);
+  const conComanda = delTurno.filter((t) => pendientesDe(t.items) > 0).length;
 
   return (
     <>
       <main className="mx-auto max-w-7xl px-4 py-6">
         <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold">Salón</h1>
+            <h1 className="text-2xl font-semibold">
+              {scope === "mias" ? "Mis mesas" : "Salón"}
+            </h1>
             <p className="text-sm text-[var(--color-muted)]">
-              {ocupadas} de {tables.length} mesas ocupadas
+              {ocupadas} de {delTurno.length} mesas ocupadas
               {conComanda > 0 ? (
                 <span className="text-[var(--color-accent)]">
                   {" · "}
@@ -251,7 +278,7 @@ export function SalonBoard({
         {tabs.length > 1 ? (
           <div className="mb-3 flex flex-wrap items-center gap-1">
             {tabs.map((tab) => {
-              const cuantas = tables.filter(
+              const cuantas = delTurno.filter(
                 (t) => t.table.sector_id === tab.id,
               ).length;
 
@@ -276,7 +303,13 @@ export function SalonBoard({
           </div>
         ) : null}
 
-        {vista === "grilla" ? (
+        {delTurno.length === 0 ? (
+          <p className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-12 text-center text-sm text-[var(--color-muted)]">
+            {scope === "mias"
+              ? "Todavía no tomaste ninguna mesa. Tomalas desde el salón."
+              : "No hay mesas libres en este momento."}
+          </p>
+        ) : vista === "grilla" ? (
           <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
             {visibles.map((detail) => (
               <li key={detail.table.id}>
@@ -344,12 +377,14 @@ export function SalonBoard({
           key={selected.table.id}
           detail={selected}
           products={products}
+          isMine={selected.table.assigned_waiter === currentUserId}
+          isManager={esEncargado}
+          staff={staff.filter((p) => p.id !== selected.table.assigned_waiter)}
           waiterName={
             selected.table.assigned_waiter
               ? waiters[selected.table.assigned_waiter]
               : undefined
           }
-          isMine={selected.table.assigned_waiter === currentUserId}
           hasOpenShift={hasOpenShift}
           onClose={() => setSelectedId(null)}
           onError={setError}
@@ -514,6 +549,8 @@ function TablePanel({
   products,
   waiterName,
   isMine,
+  isManager,
+  staff,
   hasOpenShift,
   onClose,
   onError,
@@ -522,6 +559,8 @@ function TablePanel({
   products: Product[];
   waiterName?: string;
   isMine: boolean;
+  isManager: boolean;
+  staff: { id: string; full_name: string }[];
   hasOpenShift: boolean;
   onClose: () => void;
   onError: (msg: string | null) => void;
@@ -531,6 +570,8 @@ function TablePanel({
   const [category, setCategory] = useState<ProductCategory | "todos">("todos");
   const [search, setSearch] = useState("");
   const [confirmingClose, setConfirmingClose] = useState(false);
+  const [transfiriendo, setTransfiriendo] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     function onEsc(e: KeyboardEvent) {
@@ -593,18 +634,40 @@ function TablePanel({
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => run(() => toggleTableAssignment(table.id))}
-            disabled={isPending}
-            className={`ml-auto rounded-lg border px-3 py-1.5 text-sm transition-colors disabled:opacity-50 ${
-              isMine
-                ? "border-[var(--color-accent)] text-[var(--color-accent)]"
-                : "border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-ink)]"
-            }`}
-          >
-            {isMine ? "Soltar mesa" : "Tomar mesa"}
-          </button>
+          <div className="ml-auto flex items-center gap-2">
+            {table.assigned_waiter === null ? (
+              <button
+                type="button"
+                onClick={() =>
+                  run(async () => {
+                    const result = await takeTable(table.id);
+                    // Tomarla la saca del salón de los demás: quien la tomó
+                    // sigue en «Mis mesas», que es donde va a vivir de ahora
+                    // en más.
+                    if (!result.error) router.push("/admin/mis-mesas");
+                    return result;
+                  })
+                }
+                disabled={isPending}
+                className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm text-[var(--color-muted)] transition-colors hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] disabled:opacity-50"
+              >
+                Tomar mesa
+              </button>
+            ) : isMine || isManager ? (
+              <button
+                type="button"
+                onClick={() => setTransfiriendo((t) => !t)}
+                disabled={isPending || staff.length === 0}
+                className={`rounded-lg border px-3 py-1.5 text-sm transition-colors disabled:opacity-50 ${
+                  transfiriendo
+                    ? "border-[var(--color-accent)] text-[var(--color-accent)]"
+                    : "border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-ink)]"
+                }`}
+              >
+                Transferir
+              </button>
+            ) : null}
+          </div>
 
           <button
             type="button"
@@ -615,6 +678,36 @@ function TablePanel({
             ✕
           </button>
         </header>
+
+        {transfiriendo ? (
+          <div className="border-b border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-3">
+            <p className="mb-2 text-sm text-[var(--color-muted)]">
+              ¿A quién le pasás la mesa {table.number}?
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {staff.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  disabled={isPending}
+                  onClick={() =>
+                    run(async () => {
+                      const result = await transferTable(table.id, p.id);
+                      if (!result.error) {
+                        setTransfiriendo(false);
+                        onClose();
+                      }
+                      return result;
+                    })
+                  }
+                  className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm transition-colors hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] disabled:opacity-50"
+                >
+                  {p.full_name}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         {/* Cuenta */}
         <div className="max-h-[38%] overflow-y-auto border-b border-[var(--color-border)] px-5 py-3">
@@ -769,25 +862,32 @@ function TablePanel({
           {!order || items.length === 0 ? (
             table.status === "ocupada" ? (
               // Mesa abierta sin consumos: no se puede cobrar, pero tampoco
-              // puede quedar ocupada para siempre.
+              // puede quedar ocupada para siempre. Soltarla es del encargado.
               <div className="grid gap-2">
                 <p className="text-center text-sm text-[var(--color-muted)]">
                   Cargá productos para poder cobrar.
                 </p>
-                <button
-                  type="button"
-                  disabled={isPending}
-                  onClick={() =>
-                    run(async () => {
-                      const result = await releaseEmptyTable(table.id);
-                      if (!result.error) onClose();
-                      return result;
-                    })
-                  }
-                  className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm text-[var(--color-muted)] transition-colors hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:opacity-50"
-                >
-                  Liberar mesa sin cobrar
-                </button>
+                {isManager ? (
+                  <button
+                    type="button"
+                    disabled={isPending}
+                    onClick={() =>
+                      run(async () => {
+                        const result = await releaseTable(table.id);
+                        if (!result.error) onClose();
+                        return result;
+                      })
+                    }
+                    className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm text-[var(--color-muted)] transition-colors hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:opacity-50"
+                  >
+                    Liberar mesa sin cobrar
+                  </button>
+                ) : (
+                  <p className="text-center text-xs text-[var(--color-muted)]">
+                    Si la abriste por error, avisale al encargado: soltar una
+                    mesa sin cobrar es de él.
+                  </p>
+                )}
               </div>
             ) : (
               <button

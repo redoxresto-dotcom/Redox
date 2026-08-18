@@ -3,7 +3,14 @@ import { requireStaff } from "@/lib/auth";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { signOut } from "../login/actions";
 import { AlertMonitor } from "./_components/alert-monitor";
-import { hasRank, ROLE_LABELS, type Alert, type BarTable } from "@/lib/types";
+import { redirect } from "next/navigation";
+import {
+  hasRank,
+  ROLE_LABELS,
+  stationOf,
+  type Alert,
+  type BarTable,
+} from "@/lib/types";
 
 export default async function AdminLayout({
   children,
@@ -13,6 +20,11 @@ export default async function AdminLayout({
   // Guard real: aunque el proxy ya filtró, cada render vuelve a validar
   // el usuario y su perfil contra la base.
   const profile = await requireStaff();
+
+  // La barra y la cocina no tienen nada que hacer en el panel: su trabajo son
+  // las comandas de todas las mesas. Vale para todo /admin, no solo el salón.
+  const station = stationOf(profile.role);
+  if (station) redirect(`/estacion/${station}`);
 
   const supabase = await getSupabaseServerClient();
   const [alertsRes, tablesRes] = await Promise.all([
@@ -28,7 +40,7 @@ export default async function AdminLayout({
     ((tablesRes.data ?? []) as Pick<BarTable, "id" | "number">[]).map((t) => [
       t.id,
       t.number,
-    ])
+    ]),
   );
 
   return (
@@ -36,7 +48,8 @@ export default async function AdminLayout({
       <header className="sticky top-0 z-30 border-b border-[var(--color-border)] bg-[var(--color-bg)]/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
           <Link href="/admin" className="font-semibold tracking-tight">
-            POS <span className="text-[var(--color-accent)]">Punta Carretas</span>
+            POS{" "}
+            <span className="text-[var(--color-accent)]">Punta Carretas</span>
           </Link>
 
           <nav className="flex flex-wrap items-center gap-1 text-sm">
@@ -45,6 +58,12 @@ export default async function AdminLayout({
               className="rounded-lg px-3 py-1.5 text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-ink)]"
             >
               Salón
+            </Link>
+            <Link
+              href="/admin/mis-mesas"
+              className="rounded-lg px-3 py-1.5 text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-ink)]"
+            >
+              Mis mesas
             </Link>
             <Link
               href="/estacion/barra"

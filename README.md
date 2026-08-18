@@ -21,6 +21,8 @@ Ejecutar **en este orden**:
 | 8 | [`supabase/007_salon.sql`](supabase/007_salon.sql) | Sectores y plano del salón |
 | 9 | [`supabase/008_carta.sql`](supabase/008_carta.sql) | Carta pública y cierre de la filtración de costos |
 | 10 | [`supabase/009_gerente.sql`](supabase/009_gerente.sql) | Rol gerente y jerarquía de permisos |
+| 11 | [`supabase/010_mesas_mozo.sql`](supabase/010_mesas_mozo.sql) | Tomar, transferir y soltar mesas |
+| 12 | [`supabase/011_estaciones_usuario.sql`](supabase/011_estaciones_usuario.sql) | Usuarios de barra y de cocina |
 
 Todos son idempotentes: se pueden volver a correr sin romper nada.
 
@@ -89,6 +91,42 @@ la interfaz:
 | Editar el plano del salón | ❌ | ❌ | ✅ | ✅ |
 | Editar catálogo (precios y costos) | ❌ | ❌ | ✅ | ✅ |
 | Alta, baja y cambio de nivel de usuarios | ❌ | ❌ | ❌ | ✅ |
+
+### Barra y cocina son otro trabajo, no otro escalón
+
+`barra` y `cocina` pesan lo mismo que un mozo —rango 1, sin mando sobre nadie—
+y lo único que cambia es a qué pantalla entran: sus comandas, con **todas** las
+mesas. Un mozo entra a las suyas. Cada uno cae en su lugar al iniciar sesión, y
+si escribe una URL que no le toca, rebota.
+
+Esa separación es la que hace posible filtrar mesas por dueño. Mientras la
+cocina entraba con un usuario de mozo, el mismo nivel necesitaba ver todas las
+mesas para las comandas y solo las suyas para el salón.
+
+### Mesas: quién puede qué
+
+| | Mozo | Encargado |
+|---|---|---|
+| Tomar una mesa libre | ✅ solo para sí mismo | ✅ |
+| Ver la mesa de otro mozo | ❌ | ✅ |
+| Transferirla | ✅ si es suya | ✅ |
+| Soltarla sin cobrar | ❌ | ✅ |
+| Cobrarla | ✅ | ✅ |
+
+Cobrar libera la mesa y lo puede hacer cualquiera: el cliente quiere pagar y no
+siempre está el mozo que lo atendió.
+
+**El filtro de qué mesas ve cada uno vive en la pantalla, no en la base.** Las
+pantallas de barra y cocina necesitan leer todas las mesas para mostrar el
+número de cada comanda. Los llamados del QR también se ven completos: un llamado
+que nadie ve es peor que un llamado que atiende otro.
+
+**Reglas del dato y reglas de permiso son distintas.** Los triggers no aplican
+permisos cuando no hay usuario detrás —service_role, editor SQL—, porque si no
+no habría forma de arrancar el sistema. Pero las reglas del dato valen siempre:
+una mesa no puede quedar a nombre de alguien que no atiende mesas, y nadie sale
+del salón —a cocina, o dado de baja— con mesas abiertas a su nombre. Esas dos
+frenan incluso con la clave maestra.
 
 ### La jerarquía
 
@@ -348,6 +386,8 @@ app/
       page.tsx            Editor del plano (solo admin)
       floor-editor.tsx    Arrastrar mesas, sectores y propiedades
       actions.ts          Guardar plano, alta/baja de mesas y sectores
+    mis-mesas/
+      page.tsx            Las mesas que tomó el mozo
     usuarios/
       page.tsx            Personal y niveles (solo gerente)
       user-manager.tsx    Alta, baja, cambio de nivel
@@ -363,7 +403,8 @@ app/
     page.tsx              Dashboard de salón (mesas + panel de carga)
     actions.ts            Abrir mesa, cargar productos, cobrar, resolver alertas
     _components/
-      salon-board.tsx     Plano del salón por sector y panel lateral
+      salon-board.tsx     Plano y lista del salón, con el recorte por dueño
+      salon-data.ts       Carga compartida entre el salón y «Mis mesas»
       floor-table.tsx     Dibujo de una mesa con sus sillas, compartido
       alert-monitor.tsx   Alertas en tiempo real (WebSocket)
     catalogo/
@@ -404,4 +445,6 @@ supabase/
   007_salon.sql           Sectores y plano del salón
   008_carta.sql           Carta pública (vista menu)
   009_gerente.sql         Rol gerente y jerarquía
+  010_mesas_mozo.sql      Tomar, transferir y soltar mesas
+  011_estaciones_usuario.sql  Usuarios de barra y de cocina
 ```

@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { homeFor, type StaffRole } from "@/lib/types";
 
 /**
  * Refresca el token de Supabase en cada request y cierra el paso a /admin y
@@ -67,15 +68,17 @@ export default async function proxy(request: NextRequest) {
     // caso raro. La RLS lo permite: cada uno puede leer su propio perfil.
     const { data: profile } = await supabase
       .from("profiles")
-      .select("active")
+      .select("active, role")
       .eq("id", user.id)
-      .maybeSingle();
+      .maybeSingle<{ active: boolean; role: StaffRole }>();
 
     if (profile?.active) {
-      const admin = request.nextUrl.clone();
-      admin.pathname = "/admin";
-      admin.search = "";
-      return NextResponse.redirect(admin);
+      // A su pantalla, no al salón: la cocina entra a sus comandas y el mozo a
+      // sus mesas. Mandarlos siempre a /admin obliga a un rebote de más.
+      const destino = request.nextUrl.clone();
+      destino.pathname = homeFor(profile.role);
+      destino.search = "";
+      return NextResponse.redirect(destino);
     }
 
     // Dado de baja o sin perfil: se le muestra el login con el motivo, y desde

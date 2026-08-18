@@ -1,5 +1,5 @@
 export type ProductCategory = "bebida" | "comida" | "otro";
-export type StaffRole = "mozo" | "admin" | "gerente";
+export type StaffRole = "mozo" | "barra" | "cocina" | "admin" | "gerente";
 export type TableStatus = "libre" | "ocupada";
 export type TableShape = "redonda" | "cuadrada" | "rectangular";
 export type OrderStatus = "abierta" | "cobrada";
@@ -9,11 +9,7 @@ export type Station = "barra" | "cocina" | "ninguna";
 /** Avance de una línea de la cuenta dentro de su estación. */
 export type ItemStatus = "pedido" | "preparando" | "listo";
 export type PaymentMethod =
-  | "efectivo"
-  | "debito"
-  | "credito"
-  | "transferencia"
-  | "otro";
+  "efectivo" | "debito" | "credito" | "transferencia" | "otro";
 export type AlertStatus = "pendiente" | "resuelta";
 
 export type Profile = {
@@ -226,17 +222,46 @@ export const SHAPE_LABELS: Record<TableShape, string> = {
  */
 export const ROLE_RANK: Record<StaffRole, number> = {
   mozo: 1,
+  // Barra y cocina no son un escalón más: son otro trabajo. Pesan lo mismo que
+  // un mozo y lo único que cambia es a qué pantalla entran.
+  barra: 1,
+  cocina: 1,
   admin: 2,
   gerente: 3,
 };
 
 export const ROLE_LABELS: Record<StaffRole, string> = {
   mozo: "Mozo",
+  barra: "Barra",
+  cocina: "Cocina",
   admin: "Admin",
   gerente: "Gerente",
 };
 
-export const STAFF_ROLES: readonly StaffRole[] = ["mozo", "admin", "gerente"] as const;
+export const STAFF_ROLES: readonly StaffRole[] = [
+  "mozo",
+  "barra",
+  "cocina",
+  "admin",
+  "gerente",
+] as const;
+
+/** Su pantalla de comandas, o null si su lugar es el salón. */
+export function stationOf(role: StaffRole): "barra" | "cocina" | null {
+  return role === "barra" || role === "cocina" ? role : null;
+}
+
+/** Quiénes pueden tener una mesa a su nombre. */
+export function atiendeMesas(role: StaffRole): boolean {
+  return role === "mozo" || role === "admin" || role === "gerente";
+}
+
+/** A dónde entra cada uno al iniciar sesión. */
+export function homeFor(role: StaffRole): string {
+  const station = stationOf(role);
+  if (station) return `/estacion/${station}`;
+  return role === "mozo" ? "/admin/mis-mesas" : "/admin";
+}
 
 /** ¿`role` llega al nivel `min`? */
 export function hasRank(role: StaffRole, min: StaffRole): boolean {

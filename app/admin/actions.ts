@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
-import { requireStaff } from "@/lib/auth";
+import { requireAdmin, requireStaff } from "@/lib/auth";
 import { isPaymentMethod, type PaymentMethod } from "@/lib/types";
 
 export type ActionResult = { error: string | null };
@@ -38,18 +38,20 @@ export async function openTable(tableId: string): Promise<ActionResult> {
  */
 export async function addProductToTable(
   tableId: string,
-  productId: string
+  productId: string,
 ): Promise<ActionResult> {
   const profile = await requireStaff();
   const supabase = await getSupabaseServerClient();
 
   const { data: orderId, error: rpcError } = await supabase.rpc(
     "open_table_order",
-    { p_table_id: tableId }
+    { p_table_id: tableId },
   );
 
   if (rpcError || !orderId) {
-    return { error: "No se pudo abrir la cuenta: " + (rpcError?.message ?? "") };
+    return {
+      error: "No se pudo abrir la cuenta: " + (rpcError?.message ?? ""),
+    };
   }
 
   const { data: product, error: prodError } = await supabase
@@ -89,7 +91,8 @@ export async function addProductToTable(
         created_by: profile.id,
       });
 
-  if (error) return { error: "No se pudo cargar el producto: " + error.message };
+  if (error)
+    return { error: "No se pudo cargar el producto: " + error.message };
 
   revalidatePath("/admin");
   revalidatePath("/estacion", "layout");
@@ -99,7 +102,7 @@ export async function addProductToTable(
 /** Suma o resta unidades. Al llegar a cero, borra la línea. */
 export async function changeItemQuantity(
   itemId: string,
-  delta: number
+  delta: number,
 ): Promise<ActionResult> {
   const profile = await requireStaff();
   const supabase = await getSupabaseServerClient();
@@ -126,7 +129,8 @@ export async function changeItemQuantity(
       created_by: profile.id,
     });
 
-    if (error) return { error: "No se pudo cargar el producto: " + error.message };
+    if (error)
+      return { error: "No se pudo cargar el producto: " + error.message };
 
     revalidatePath("/admin");
     revalidatePath("/estacion", "layout");
@@ -155,7 +159,10 @@ export async function removeItem(itemId: string): Promise<ActionResult> {
   await requireStaff();
   const supabase = await getSupabaseServerClient();
 
-  const { error } = await supabase.from("order_items").delete().eq("id", itemId);
+  const { error } = await supabase
+    .from("order_items")
+    .delete()
+    .eq("id", itemId);
   if (error) return { error: "No se pudo quitar: " + error.message };
 
   revalidatePath("/admin");
@@ -172,7 +179,7 @@ export async function removeItem(itemId: string): Promise<ActionResult> {
  */
 export async function closeOrder(
   orderId: string,
-  paymentMethod: PaymentMethod
+  paymentMethod: PaymentMethod,
 ): Promise<ActionResult> {
   await requireStaff();
 
@@ -202,68 +209,104 @@ export async function closeOrder(
 }
 
 /**
- * Libera una mesa abierta por error.
+ * Suelta una mesa sin cobrar: la abrieron por error.
  *
- * Solo procede si la cuenta no tiene ningún consumo: sin esto, una mesa que se
- * abre de más queda ocupada para siempre, porque cobrar exige al menos un ítem.
- * Se borra la cuenta vacía en lugar de cobrarla en $0, para no ensuciar el
- * histórico de ventas con tickets fantasma.
+ * Es del encargado. Un mozo que se equivoca de mesa avisa; si pudiera soltarla
+ * él, también podría sacarse de encima una mesa que no quiere atender.
+ * La regla vive en el RPC, así que tampoco alcanza con saltear la pantalla.
  */
-export async function releaseEmptyTable(tableId: string): Promise<ActionResult> {
-  await requireStaff();
+export async function releaseTable(tableId: string): Promise<ActionResult> {
+  await requireAdmin();
   const supabase = await getSupabaseServerClient();
 
-  const { data: order } = await supabase
-    .from("orders")
-    .select("id, order_items(id)")
-    .eq("table_id", tableId)
-    .eq("status", "abierta")
-    .maybeSingle();
+  const { error } = await supabase.rpc("release_table", {
+    p_table_id: tableId,
+  });
 
-  if (order) {
-    if ((order.order_items as { id: string }[]).length > 0) {
-      return { error: "La mesa tiene consumos: hay que cobrarla, no liberarla." };
+  if (error) {
+    if (error.message.includes("consumos")) {
+      return {
+        error: "La mesa tiene consumos: hay que cobrarla, no liberarla.",
+      };
     }
-
-    const { error } = await supabase.from("orders").delete().eq("id", order.id);
-    if (error) return { error: "No se pudo liberar la mesa: " + error.message };
+    if (error.message.includes("encargado")) {
+      return { error: "Soltar una mesa sin cobrar es del encargado." };
+    }
+    return { error: "No se pudo liberar la mesa: " + error.message };
   }
 
-  const { error } = await supabase
-    .from("tables")
-    .update({ status: "libre", assigned_waiter: null })
-    .eq("id", tableId);
-
-  if (error) return { error: "No se pudo liberar la mesa: " + error.message };
-
   revalidatePath("/admin");
+  revalidatePath("/admin/mis-mesas");
   return OK;
 }
 
-/** El mozo se asigna la mesa, o la suelta si ya era suya. */
-export async function toggleTableAssignment(
-  tableId: string
-): Promise<ActionResult> {
+/**
+ * El mozo toma una mesa libre.
+ *
+ * Desde que la toma, la mesa desaparece del salón de los demás mozos y le
+ * aparece en «Mis mesas». La base no deja tomar una mesa para otro ni sacarle
+ * la mesa a un compañero.
+ */
+export async function takeTable(tableId: string): Promise<ActionResult> {
   const profile = await requireStaff();
   const supabase = await getSupabaseServerClient();
 
-  const { data: table } = await supabase
+  const { error } = await supabase
     .from("tables")
-    .select("assigned_waiter")
-    .eq("id", tableId)
-    .single();
+    .update({ assigned_waiter: profile.id })
+    .eq("id", tableId);
+
+  if (error) return { error: traducirMesa(error.message) };
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/mis-mesas");
+  return OK;
+}
+
+/**
+ * Pasa la mesa a otro mozo. Es lo que hace quien termina el turno con mesas
+ * abiertas: no las suelta, las entrega, y la cuenta sigue viva sin dueño
+ * intermedio.
+ */
+export async function transferTable(
+  tableId: string,
+  toWaiterId: string,
+): Promise<ActionResult> {
+  await requireStaff();
+
+  if (!toWaiterId) return { error: "Elegí a quién le pasás la mesa." };
+
+  const supabase = await getSupabaseServerClient();
 
   const { error } = await supabase
     .from("tables")
-    .update({
-      assigned_waiter: table?.assigned_waiter === profile.id ? null : profile.id,
-    })
+    .update({ assigned_waiter: toWaiterId })
     .eq("id", tableId);
 
-  if (error) return { error: "No se pudo asignar la mesa: " + error.message };
+  if (error) return { error: traducirMesa(error.message) };
 
   revalidatePath("/admin");
+  revalidatePath("/admin/mis-mesas");
   return OK;
+}
+
+/** Los mensajes del trigger ya están escritos para que los lea un mozo. */
+function traducirMesa(mensaje: string): string {
+  const conocidos = [
+    "Soltar una mesa es del encargado",
+    "Una mesa libre solo la podés tomar para vos",
+    "La mesa está tomada por otro mozo",
+    "La mesa solo se puede asignar a alguien del personal activo",
+  ];
+
+  const encontrado = conocidos.find((c) => mensaje.includes(c));
+  if (encontrado) return mensaje.slice(mensaje.indexOf(encontrado));
+
+  if (mensaje.includes("row-level security")) {
+    return "No tenés permiso para hacer ese cambio.";
+  }
+
+  return "No se pudo cambiar la mesa: " + mensaje;
 }
 
 /** Marca una alerta del cliente como atendida. */
@@ -276,7 +319,8 @@ export async function resolveAlert(alertId: string): Promise<ActionResult> {
     .update({ status: "resuelta" })
     .eq("id", alertId);
 
-  if (error) return { error: "No se pudo resolver la alerta: " + error.message };
+  if (error)
+    return { error: "No se pudo resolver la alerta: " + error.message };
 
   revalidatePath("/admin");
   return OK;

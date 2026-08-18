@@ -3,18 +3,22 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { homeFor, type StaffRole } from "@/lib/types";
 
 export type LoginState = { error: string | null };
 
-/** Solo se permite volver a rutas internas: evita redirects a sitios externos. */
-function safeRedirect(target: FormDataEntryValue | null): string {
+/**
+ * Solo se permite volver a rutas internas: evita redirects a sitios externos.
+ * Devuelve null si no vino ninguna, y entonces decide el rol a dónde entrar.
+ */
+function safeRedirect(target: FormDataEntryValue | null): string | null {
   const value = typeof target === "string" ? target : "";
-  return value.startsWith("/") && !value.startsWith("//") ? value : "/admin";
+  return value.startsWith("/") && !value.startsWith("//") ? value : null;
 }
 
 export async function signIn(
   _prev: LoginState,
-  formData: FormData
+  formData: FormData,
 ): Promise<LoginState> {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
@@ -71,9 +75,9 @@ export async function signIn(
   // el guard del layout lo rebota, y el motivo se pierde por el camino.
   const { data: profile } = await supabase
     .from("profiles")
-    .select("active")
+    .select("active, role")
     .eq("id", data.user.id)
-    .maybeSingle<{ active: boolean }>();
+    .maybeSingle<{ active: boolean; role: StaffRole }>();
 
   if (!profile?.active) {
     // Se cierra la sesión recién abierta: dejarla viva es lo que hacía rebotar
@@ -86,7 +90,11 @@ export async function signIn(
     };
   }
 
-  const destination = safeRedirect(formData.get("redirect"));
+  // Cada uno entra a su pantalla: la cocina a sus comandas, el mozo a sus
+  // mesas, el encargado al salón. Si venía rebotado de una URL concreta, gana
+  // esa.
+  const destination =
+    safeRedirect(formData.get("redirect")) ?? homeFor(profile.role);
   revalidatePath("/", "layout");
   redirect(destination);
 }

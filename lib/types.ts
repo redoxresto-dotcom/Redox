@@ -1,5 +1,5 @@
 export type ProductCategory = "bebida" | "comida" | "otro";
-export type StaffRole = "mozo" | "admin";
+export type StaffRole = "mozo" | "admin" | "gerente";
 export type TableStatus = "libre" | "ocupada";
 export type TableShape = "redonda" | "cuadrada" | "rectangular";
 export type OrderStatus = "abierta" | "cobrada";
@@ -216,6 +216,37 @@ export const SHAPE_LABELS: Record<TableShape, string> = {
   cuadrada: "Cuadrada",
   rectangular: "Rectangular",
 };
+
+/**
+ * Jerarquía del personal. Se manda sobre quien tiene rango estrictamente menor:
+ * un gerente sobre admins y mozos, un admin sobre mozos, un mozo sobre nadie.
+ *
+ * Los mismos números están en la base (`role_rank`). Acá viven para decidir qué
+ * mostrar; quien decide qué se puede hacer es Postgres.
+ */
+export const ROLE_RANK: Record<StaffRole, number> = {
+  mozo: 1,
+  admin: 2,
+  gerente: 3,
+};
+
+export const ROLE_LABELS: Record<StaffRole, string> = {
+  mozo: "Mozo",
+  admin: "Admin",
+  gerente: "Gerente",
+};
+
+export const STAFF_ROLES: readonly StaffRole[] = ["mozo", "admin", "gerente"] as const;
+
+/** ¿`role` llega al nivel `min`? */
+export function hasRank(role: StaffRole, min: StaffRole): boolean {
+  return ROLE_RANK[role] >= ROLE_RANK[min];
+}
+
+/** Roles que alguien puede asignar: solo por debajo del suyo. */
+export function assignableRoles(role: StaffRole): StaffRole[] {
+  return STAFF_ROLES.filter((r) => ROLE_RANK[r] < ROLE_RANK[role]);
+}
 
 export const CATEGORY_LABELS: Record<ProductCategory, string> = {
   bebida: "Bebidas",

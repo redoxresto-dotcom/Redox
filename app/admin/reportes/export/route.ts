@@ -10,7 +10,7 @@ import {
   WEEKDAY_LABELS,
   getByWeekday,
 } from "../data";
-import { PAYMENT_LABELS, isPaymentMethod } from "@/lib/types";
+import { hasRank, PAYMENT_LABELS, isPaymentMethod } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -45,7 +45,7 @@ function csv(headers: string[], rows: (string | number)[][]): string {
 export async function GET(request: NextRequest) {
   // El proxy ya frena a quien no tenga sesión; acá se controla el rol.
   const profile = await getCurrentProfile();
-  if (!profile || !profile.active || profile.role !== "admin") {
+  if (!profile || !profile.active || !hasRank(profile.role, "admin")) {
     return NextResponse.json({ error: "No autorizado." }, { status: 403 });
   }
 

@@ -2,7 +2,7 @@ import "server-only";
 
 import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
-import type { Profile } from "@/lib/types";
+import { hasRank, type Profile } from "@/lib/types";
 
 /**
  * Devuelve el perfil del mozo logueado o corta el render mandando a /login.
@@ -31,10 +31,22 @@ export async function requireStaff(): Promise<Profile> {
   return profile;
 }
 
-/** Igual que requireStaff pero exige rol admin (catálogo, usuarios). */
+/**
+ * Igual que requireStaff pero exige nivel admin o superior.
+ *
+ * Se compara por rango y no por igualdad: el gerente está por encima del admin
+ * y tiene que pasar por todas las puertas que pasa un admin.
+ */
 export async function requireAdmin(): Promise<Profile> {
   const profile = await requireStaff();
-  if (profile.role !== "admin") redirect("/admin?error=solo-admin");
+  if (!hasRank(profile.role, "admin")) redirect("/admin?error=solo-admin");
+  return profile;
+}
+
+/** Exige nivel gerente: la administración de usuarios. */
+export async function requireManager(): Promise<Profile> {
+  const profile = await requireStaff();
+  if (!hasRank(profile.role, "gerente")) redirect("/admin?error=solo-gerente");
   return profile;
 }
 

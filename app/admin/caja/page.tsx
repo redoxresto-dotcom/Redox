@@ -1,7 +1,13 @@
 import { requireStaff } from "@/lib/auth";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { CajaClient, type ShiftSummary } from "./caja-client";
-import type { CashShift, Order, PaymentMethod, Profile } from "@/lib/types";
+import {
+  hasRank,
+  type CashShift,
+  type Order,
+  type PaymentMethod,
+  type Profile,
+} from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -66,7 +72,7 @@ export default async function CajaPage() {
       summary={resumen}
       history={(historialRes.data ?? []) as CashShift[]}
       names={nombres}
-      isAdmin={profile.role === "admin"}
+      isAdmin={hasRank(profile.role, "admin")}
     />
   );
 }

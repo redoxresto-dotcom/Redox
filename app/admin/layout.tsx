@@ -3,7 +3,7 @@ import { requireStaff } from "@/lib/auth";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { signOut } from "../login/actions";
 import { AlertMonitor } from "./_components/alert-monitor";
-import type { Alert, BarTable } from "@/lib/types";
+import { hasRank, ROLE_LABELS, type Alert, type BarTable } from "@/lib/types";
 
 export default async function AdminLayout({
   children,
@@ -64,7 +64,7 @@ export default async function AdminLayout({
             >
               Caja
             </Link>
-            {profile.role === "admin" ? (
+            {hasRank(profile.role, "admin") ? (
               <>
                 <Link
                   href="/admin/catalogo"
@@ -84,6 +84,14 @@ export default async function AdminLayout({
                 >
                   Reportes
                 </Link>
+                {hasRank(profile.role, "gerente") ? (
+                  <Link
+                    href="/admin/usuarios"
+                    className="rounded-lg px-3 py-1.5 text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-ink)]"
+                  >
+                    Usuarios
+                  </Link>
+                ) : null}
                 <Link
                   href="/admin/qr"
                   className="rounded-lg px-3 py-1.5 text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-ink)]"
@@ -97,9 +105,15 @@ export default async function AdminLayout({
           <div className="ml-auto flex items-center gap-3">
             <span className="hidden text-sm text-[var(--color-muted)] sm:inline">
               {profile.full_name}
-              {profile.role === "admin" ? (
-                <span className="ml-1.5 rounded bg-[var(--color-surface-2)] px-1.5 py-0.5 text-[10px] tracking-wide uppercase">
-                  admin
+              {hasRank(profile.role, "admin") ? (
+                <span
+                  className={`ml-1.5 rounded px-1.5 py-0.5 text-[10px] tracking-wide uppercase ${
+                    profile.role === "gerente"
+                      ? "bg-[var(--color-accent)]/20 text-[var(--color-accent)]"
+                      : "bg-[var(--color-surface-2)]"
+                  }`}
+                >
+                  {ROLE_LABELS[profile.role]}
                 </span>
               ) : null}
             </span>

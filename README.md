@@ -20,6 +20,7 @@ Ejecutar **en este orden**:
 | 7 | [`supabase/006_reportes.sql`](supabase/006_reportes.sql) | Funciones de reporte de ventas |
 | 8 | [`supabase/007_salon.sql`](supabase/007_salon.sql) | Sectores y plano del salón |
 | 9 | [`supabase/008_carta.sql`](supabase/008_carta.sql) | Carta pública y cierre de la filtración de costos |
+| 10 | [`supabase/009_gerente.sql`](supabase/009_gerente.sql) | Rol gerente y jerarquía de permisos |
 
 Todos son idempotentes: se pueden volver a correr sin romper nada.
 
@@ -30,8 +31,11 @@ Todos son idempotentes: se pueden volver a correr sin romper nada.
 - Email y contraseña del encargado.
 - Marcar **Auto Confirm User** (si no, Supabase le manda un mail de confirmación).
 
-> El **primer usuario** que se cree queda automáticamente como `admin`.
+> El **primer usuario** que se cree queda automáticamente como `gerente`.
 > Los siguientes entran como `mozo`.
+>
+> De ahí en más, el alta se hace desde **/admin/usuarios** y no desde el panel
+> de Supabase.
 
 Para dar de alta más mozos, repetir el paso. Para cambiar un rol a mano:
 
@@ -67,23 +71,48 @@ Entrar a http://localhost:3000/admin — redirige a `/login`.
 
 ## Modelo de seguridad
 
-Tres niveles, aplicados por la base de datos (RLS), no solo por la interfaz:
+Cuatro niveles, aplicados por la base de datos (RLS y triggers), no solo por
+la interfaz:
 
-| | `anon` (cliente con QR) | `mozo` | `admin` |
-|---|---|---|---|
-| Ver mesas | ✅ | ✅ | ✅ |
-| Ver la carta pública (vista `menu`) | ✅ | ✅ | ✅ |
-| Leer `products`, con sus costos | ❌ | ✅ | ✅ |
-| Crear alertas (`llamar_mozo` / `pedir_cuenta`) | ✅ | ✅ | ✅ |
-| Ver / resolver alertas | ver | ✅ | ✅ |
-| Ver y operar cuentas (`orders`, `order_items`) | ❌ | ✅ | ✅ |
-| Pantallas de barra y cocina (`/estacion`) | ❌ | ✅ | ✅ |
-| Abrir la caja | ❌ | ✅ | ✅ |
-| Cerrar la caja y arquear | ❌ | ❌ | ✅ |
-| Reportes y exportación | ❌ | ❌ | ✅ |
-| Editar el plano del salón | ❌ | ❌ | ✅ |
-| Editar catálogo (precios y costos) | ❌ | ❌ | ✅ |
-| Gestionar usuarios | ❌ | ❌ | ✅ |
+| | `anon` (cliente con QR) | `mozo` | `admin` | `gerente` |
+|---|---|---|---|---|
+| Ver mesas | ✅ | ✅ | ✅ | ✅ |
+| Ver la carta pública (vista `menu`) | ✅ | ✅ | ✅ | ✅ |
+| Leer `products`, con sus costos | ❌ | ✅ | ✅ | ✅ |
+| Crear alertas (`llamar_mozo` / `pedir_cuenta`) | ✅ | ✅ | ✅ | ✅ |
+| Ver / resolver alertas | ver | ✅ | ✅ | ✅ |
+| Ver y operar cuentas (`orders`, `order_items`) | ❌ | ✅ | ✅ | ✅ |
+| Pantallas de barra y cocina (`/estacion`) | ❌ | ✅ | ✅ | ✅ |
+| Abrir la caja | ❌ | ✅ | ✅ | ✅ |
+| Cerrar la caja y arquear | ❌ | ❌ | ✅ | ✅ |
+| Reportes y exportación | ❌ | ❌ | ✅ | ✅ |
+| Editar el plano del salón | ❌ | ❌ | ✅ | ✅ |
+| Editar catálogo (precios y costos) | ❌ | ❌ | ✅ | ✅ |
+| Alta, baja y cambio de nivel de usuarios | ❌ | ❌ | ❌ | ✅ |
+
+### La jerarquía
+
+`mozo` (1) < `admin` (2) < `gerente` (3). Una sola regla, y vale para todo:
+**se manda sobre quien tiene rango estrictamente menor.** Un gerente crea, edita
+y da de baja admins y mozos; un admin, solo mozos; un mozo, a nadie. Nadie puede
+cambiarse el rol a sí mismo ni borrar su propio usuario, y tiene que quedar
+siempre al menos un gerente activo.
+
+El gerente hereda todo lo del admin sin duplicar una sola regla: `is_admin()`
+pregunta por el rango y no por el nombre del rol, así que las diecisiete reglas
+que ya la usaban aceptan gerente sin haberlas tocado.
+
+**Por qué el cambio de rol lo gobierna un trigger y no una policy.** La RLS
+decide si una fila se puede tocar, no qué columna. La policy anterior dejaba
+editar la fila propia —para el nombre— y con eso alcanzaba para correr
+`update profiles set role = 'admin' where id = auth.uid()` y ascenderse solo.
+Un trigger sí puede mirar qué cambió, y es el que ahora aplica la jerarquía.
+
+**Las altas y bajas de usuarios usan `service_role`**, porque crear o borrar una
+cuenta de Auth no se puede hacer con la sesión de nadie. Esa clave bypassea RLS
+y triggers, así que en esas dos operaciones la jerarquía la verifica el código
+de la Server Action. El cambio de rol y la baja lógica van con la sesión del
+gerente justamente para que los verifique Postgres.
 
 Detalles que conviene tener presentes:
 
@@ -319,6 +348,10 @@ app/
       page.tsx            Editor del plano (solo admin)
       floor-editor.tsx    Arrastrar mesas, sectores y propiedades
       actions.ts          Guardar plano, alta/baja de mesas y sectores
+    usuarios/
+      page.tsx            Personal y niveles (solo gerente)
+      user-manager.tsx    Alta, baja, cambio de nivel
+      actions.ts          createStaff / changeRole / setActive / deleteStaff
     caja/
       page.tsx            Turno abierto, resumen por medio de pago e historial
       caja-client.tsx     Abrir turno, arqueo y cierre
@@ -352,7 +385,7 @@ app/
   api/pool-webhook/
     route.ts              Puente para el lector RFID de las mesas de pool
 lib/
-  auth.ts                 requireStaff() / requireAdmin()
+  auth.ts                 requireStaff() / requireAdmin() / requireManager()
   beep.ts                 Chirrido por Web Audio, compartido por las pantallas
   floor.ts                Medidas del plano, grilla y posición de las sillas
   types.ts                Tipos del dominio + formato de moneda (UYU)
@@ -370,4 +403,5 @@ supabase/
   006_reportes.sql        Funciones de reporte
   007_salon.sql           Sectores y plano del salón
   008_carta.sql           Carta pública (vista menu)
+  009_gerente.sql         Rol gerente y jerarquía
 ```

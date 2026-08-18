@@ -5,6 +5,7 @@ import {
   changeRole,
   createStaff,
   deleteStaff,
+  resetPassword,
   setActive,
 } from "./actions";
 import {
@@ -19,18 +20,23 @@ type Props = {
   profiles: Profile[];
   /** El gerente que está mirando la pantalla. */
   me: Profile;
+  /** id de perfil → mail con el que entra. Vive en auth.users, no en profiles. */
+  emails: Record<string, string>;
 };
 
-export function UserManager({ profiles, me }: Props) {
+export function UserManager({ profiles, me, emails }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [creando, setCreando] = useState(false);
   const [confirmando, setConfirmando] = useState<string | null>(null);
+  const [reseteando, setReseteando] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const roles = assignableRoles(me.role);
 
   function run(fn: () => Promise<{ error: string | null }>, onDone?: () => void) {
     setError(null);
+    setAviso(null);
     startTransition(async () => {
       const result = await fn();
       if (result.error) setError(result.error);
@@ -73,6 +79,15 @@ export function UserManager({ profiles, me }: Props) {
           className="mb-4 rounded-lg border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 px-3 py-2 text-sm text-[var(--color-danger)]"
         >
           {error}
+        </p>
+      ) : null}
+
+      {aviso ? (
+        <p
+          role="status"
+          className="mb-4 rounded-lg border border-[var(--color-free)]/40 bg-[var(--color-free)]/10 px-3 py-2 text-sm text-[var(--color-free)]"
+        >
+          {aviso}
         </p>
       ) : null}
 
@@ -152,6 +167,7 @@ export function UserManager({ profiles, me }: Props) {
           <thead className="bg-[var(--color-surface)] text-left text-xs tracking-wide text-[var(--color-muted)] uppercase">
             <tr>
               <th className="px-4 py-2.5 font-medium">Nombre</th>
+              <th className="px-4 py-2.5 font-medium">Mail</th>
               <th className="px-4 py-2.5 font-medium">Nivel</th>
               <th className="px-4 py-2.5 font-medium">Estado</th>
               <th className="px-4 py-2.5" />
@@ -176,6 +192,10 @@ export function UserManager({ profiles, me }: Props) {
                         (vos)
                       </span>
                     ) : null}
+                  </td>
+
+                  <td className="px-4 py-3 text-[var(--color-muted)]">
+                    {emails[p.id] ?? "—"}
                   </td>
 
                   <td className="px-4 py-3">
@@ -221,8 +241,61 @@ export function UserManager({ profiles, me }: Props) {
 
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-1">
-                      {editable ? (
+                      {editable && reseteando === p.id ? (
+                        <form
+                          action={(fd) =>
+                            run(
+                              () => resetPassword(p.id, fd),
+                              () => {
+                                setReseteando(null);
+                                setAviso(
+                                  `Contraseña nueva para ${p.full_name}. Pasásela en mano: no se puede volver a ver.`
+                                );
+                              }
+                            )
+                          }
+                          className="flex items-center gap-1"
+                        >
+                          <input
+                            name="password"
+                            type="text"
+                            required
+                            minLength={8}
+                            autoFocus
+                            autoComplete="off"
+                            placeholder="Contraseña nueva"
+                            className="w-44 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2 py-1 text-sm outline-none focus:border-[var(--color-accent)]"
+                          />
+                          <button
+                            type="submit"
+                            disabled={isPending}
+                            className="rounded-lg bg-[var(--color-accent)] px-2.5 py-1 text-xs font-semibold text-[#04121c] disabled:opacity-50"
+                          >
+                            Guardar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setReseteando(null)}
+                            className="rounded-lg px-2 py-1 text-[var(--color-muted)]"
+                          >
+                            ✕
+                          </button>
+                        </form>
+                      ) : editable ? (
                         <>
+                          <button
+                            type="button"
+                            disabled={isPending}
+                            onClick={() => {
+                              setReseteando(p.id);
+                              setConfirmando(null);
+                              setError(null);
+                              setAviso(null);
+                            }}
+                            className="rounded-lg px-2.5 py-1 text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)] disabled:opacity-50"
+                          >
+                            Contraseña
+                          </button>
                           <button
                             type="button"
                             disabled={isPending}
@@ -267,7 +340,14 @@ export function UserManager({ profiles, me }: Props) {
                           )}
                         </>
                       ) : (
-                        <span className="px-2.5 py-1 text-xs text-[var(--color-muted)]">
+                        <span
+                          title={
+                            soyYo
+                              ? "No podés editar tu propio usuario"
+                              : "Solo se puede editar a alguien de nivel inferior al tuyo"
+                          }
+                          className="px-2.5 py-1 text-xs text-[var(--color-muted)]"
+                        >
                           {soyYo ? "—" : "Fuera de tu alcance"}
                         </span>
                       )}
@@ -286,6 +366,11 @@ export function UserManager({ profiles, me }: Props) {
           propio: un gerente sobre admins y mozos, un admin sobre mozos. Nadie
           puede cambiarse el rol a sí mismo, y tiene que quedar siempre al menos
           un gerente activo.
+        </p>
+        <p>
+          <strong>La contraseña no se puede consultar</strong>, ni desde acá ni
+          desde ningún lado: se guarda cifrada de una sola dirección. Si un mozo
+          la olvida, se le pone una nueva con «Contraseña» y se la pasás en mano.
         </p>
         <p>
           <strong>Dar de baja</strong> revoca todos los permisos y conserva el

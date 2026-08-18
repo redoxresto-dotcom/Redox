@@ -157,6 +157,53 @@ export async function deleteStaff(userId: string): Promise<UserResult> {
   return OK;
 }
 
+/**
+ * Restablece la contraseña de alguien de nivel inferior.
+ *
+ * No hay forma de "recuperar" la anterior: Supabase guarda un hash bcrypt, que
+ * es de una sola dirección. Nadie puede leerla, ni con la clave service_role.
+ * Lo único que se puede hacer es poner una nueva, y esa se la pasa el gerente
+ * al mozo en el local, igual que en el alta.
+ */
+export async function resetPassword(
+  userId: string,
+  formData: FormData
+): Promise<UserResult> {
+  const yo = await requireManager();
+
+  const password = String(formData.get("password") ?? "");
+  if (password.length < 8) {
+    return { error: "La contraseña tiene que tener al menos 8 caracteres." };
+  }
+
+  const supabase = await getSupabaseServerClient();
+  const { data: objetivo } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", userId)
+    .maybeSingle<{ role: StaffRole }>();
+
+  if (!objetivo) return { error: "El usuario ya no existe." };
+
+  // Igual que el alta y la baja: cambiar una contraseña necesita service_role,
+  // que bypassea RLS, así que la jerarquía se verifica acá.
+  if (ROLE_RANK[objetivo.role] >= ROLE_RANK[yo.role]) {
+    return {
+      error: "Solo se puede cambiar la contraseña de alguien de nivel inferior al tuyo.",
+    };
+  }
+
+  const admin = getSupabaseAdminClient();
+  const { error } = await admin.auth.admin.updateUserById(userId, { password });
+
+  if (error) {
+    return { error: "No se pudo cambiar la contraseña: " + error.message };
+  }
+
+  revalidatePath("/admin/usuarios");
+  return OK;
+}
+
 /** Los mensajes que levanta el trigger llegan crudos; se muestran tal cual. */
 function traducir(mensaje: string): string {
   const conocidos = [

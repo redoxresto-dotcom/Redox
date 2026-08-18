@@ -112,6 +112,7 @@ export default async function SalonPage({
       currentUserId={profile.id}
       pendingAlerts={pendingAlerts}
       hasOpenShift={Boolean(shiftRes.data)}
+      role={profile.role}
       notice={error ? (ERRORS[error] ?? null) : null}
       sectors={(sectorsRes.data ?? []) as Sector[]}
     />

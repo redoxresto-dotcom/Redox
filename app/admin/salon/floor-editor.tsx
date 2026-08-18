@@ -20,7 +20,7 @@ import {
   saveLayout,
   type LayoutInput,
 } from "./actions";
-import { CANVAS_H, CANVAS_W, GRID, clamp, snap } from "@/lib/floor";
+import { CANVAS_H, CANVAS_W, GRID, clamp, fitScale, snap } from "@/lib/floor";
 import {
   SHAPE_LABELS,
   TABLE_SHAPES,
@@ -48,7 +48,7 @@ type Drag = {
 export function FloorEditor({ sectors, tables, ocupadas }: Props) {
   const router = useRouter();
   const [sectorId, setSectorId] = useState<string | null>(
-    sectors[0]?.id ?? null
+    sectors[0]?.id ?? null,
   );
   const [layout, setLayout] = useState<BarTable[]>(tables);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -75,7 +75,7 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
     if (!el) return;
 
     const ro = new ResizeObserver(([entry]) => {
-      setScale(Math.min(1, entry.contentRect.width / CANVAS_W));
+      setScale(fitScale(entry.contentRect.width));
     });
     ro.observe(el);
     return () => ro.disconnect();
@@ -96,7 +96,7 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
 
   const patch = useCallback((id: string, cambios: Partial<BarTable>) => {
     setLayout((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, ...cambios } : t))
+      prev.map((t) => (t.id === id ? { ...t, ...cambios } : t)),
     );
     setDirty((prev) => new Set(prev).add(id));
   }, []);
@@ -132,7 +132,10 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [selectedId, layout, patch]);
 
-  function run(fn: () => Promise<{ error: string | null }>, onDone?: () => void) {
+  function run(
+    fn: () => Promise<{ error: string | null }>,
+    onDone?: () => void,
+  ) {
     setError(null);
     startTransition(async () => {
       const result = await fn();
@@ -202,7 +205,7 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
       () => {
         setDirty(new Set());
         router.refresh();
-      }
+      },
     );
   }
 
@@ -214,7 +217,10 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
 
   function agregarMesa() {
     const siguiente = Math.max(0, ...layout.map((t) => t.number)) + 1;
-    run(() => createTable(siguiente, sectorId, 120, 120), () => router.refresh());
+    run(
+      () => createTable(siguiente, sectorId, 120, 120),
+      () => router.refresh(),
+    );
   }
 
   const sectorActual = sectors.find((s) => s.id === sectorId) ?? null;
@@ -291,7 +297,12 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
 
         {nuevoSector ? (
           <form
-            action={(fd) => run(() => createSector(fd), () => setNuevoSector(false))}
+            action={(fd) =>
+              run(
+                () => createSector(fd),
+                () => setNuevoSector(false),
+              )
+            }
             className="flex items-center gap-1"
           >
             <input
@@ -345,52 +356,56 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
           // El escalado es una transformación: no encoge la caja. Sin fijarle
           // la altura, el plano deja un hueco enorme debajo.
           style={{ height: CANVAS_H * scale }}
-          className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]"
+          className="overflow-x-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]"
         >
-          <div
-            onPointerDown={(e) => {
-              // Un clic en el vacío deselecciona.
-              if (e.target === e.currentTarget) setSelectedId(null);
-            }}
-            className="relative origin-top-left"
-            style={{
-              width: CANVAS_W,
-              height: CANVAS_H,
-              transform: `scale(${scale})`,
-              backgroundImage:
-                "linear-gradient(var(--color-border) 1px, transparent 1px), linear-gradient(90deg, var(--color-border) 1px, transparent 1px)",
-              backgroundSize: `${GRID * 5}px ${GRID * 5}px`,
-              backgroundPosition: "0 0",
-              opacity: 1,
-            }}
-          >
-            {visibles.map((t) => {
-              const ocupada = ocupadasSet.has(t.id);
-              return (
-                <FloorTable
-                  key={t.id}
-                  table={t}
-                  selected={t.id === selectedId}
-                  label={`Mesa ${t.number}`}
-                  title={ocupada ? "Mesa con cuenta abierta" : undefined}
-                  className={`cursor-grab active:cursor-grabbing ${
-                    ocupada
-                      ? "border-[var(--color-busy)] bg-[var(--color-busy)]/20 text-[var(--color-busy)]"
-                      : "border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-ink)]"
-                  }`}
-                  onPointerDown={(e) => onPointerDown(e, t)}
-                  onPointerMove={onPointerMove}
-                  onPointerUp={onPointerUp}
-                >
-                  <span className="text-lg font-bold tabular-nums">
-                    {t.number}
-                  </span>
-                  <span className="text-xs text-[var(--color-muted)]">
-                    {t.seats} 🪑
-                  </span>
-                </FloorTable>
-              );
-            })}
+          {/* Caja con la medida ya escalada: el transform no encoge el div en
+              el layout, y sin esto sobra plano para desplazar al costado. */}
+          <div style={{ width: CANVAS_W * scale, height: CANVAS_H * scale }}>
+            <div
+              onPointerDown={(e) => {
+                // Un clic en el vacío deselecciona.
+                if (e.target === e.currentTarget) setSelectedId(null);
+              }}
+              className="relative origin-top-left"
+              style={{
+                width: CANVAS_W,
+                height: CANVAS_H,
+                transform: `scale(${scale})`,
+                backgroundImage:
+                  "linear-gradient(var(--color-border) 1px, transparent 1px), linear-gradient(90deg, var(--color-border) 1px, transparent 1px)",
+                backgroundSize: `${GRID * 5}px ${GRID * 5}px`,
+                backgroundPosition: "0 0",
+                opacity: 1,
+              }}
+            >
+              {visibles.map((t) => {
+                const ocupada = ocupadasSet.has(t.id);
+                return (
+                  <FloorTable
+                    key={t.id}
+                    table={t}
+                    selected={t.id === selectedId}
+                    label={`Mesa ${t.number}`}
+                    title={ocupada ? "Mesa con cuenta abierta" : undefined}
+                    className={`cursor-grab active:cursor-grabbing ${
+                      ocupada
+                        ? "border-[var(--color-busy)] bg-[var(--color-busy)]/20 text-[var(--color-busy)]"
+                        : "border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-ink)]"
+                    }`}
+                    onPointerDown={(e) => onPointerDown(e, t)}
+                    onPointerMove={onPointerMove}
+                    onPointerUp={onPointerUp}
+                  >
+                    <span className="text-lg font-bold tabular-nums">
+                      {t.number}
+                    </span>
+                    <span className="text-xs text-[var(--color-muted)]">
+                      {t.seats} 🪑
+                    </span>
+                  </FloorTable>
+                );
+              })}
+            </div>
           </div>
         </div>
 
@@ -431,10 +446,10 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
                         () => {
                           setSectorId(
                             sectors.find((s) => s.id !== sectorActual.id)?.id ??
-                              null
+                              null,
                           );
                           router.refresh();
-                        }
+                        },
                       )
                     }
                     className="mt-3 w-full rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted)] transition-colors hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:opacity-50"
@@ -447,7 +462,9 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
           ) : (
             <div className="grid gap-3">
               <div className="flex items-baseline justify-between">
-                <h2 className="text-lg font-semibold">Mesa {selected.number}</h2>
+                <h2 className="text-lg font-semibold">
+                  Mesa {selected.number}
+                </h2>
                 <button
                   type="button"
                   onClick={() => setSelectedId(null)}
@@ -468,7 +485,9 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
                     patch(selected.id, {
                       shape,
                       height:
-                        shape === "rectangular" ? selected.height : selected.width,
+                        shape === "rectangular"
+                          ? selected.height
+                          : selected.width,
                     });
                   }}
                   className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
@@ -483,7 +502,9 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
 
               <div className="grid grid-cols-2 gap-2">
                 <label className="grid gap-1">
-                  <span className="text-xs text-[var(--color-muted)]">Ancho</span>
+                  <span className="text-xs text-[var(--color-muted)]">
+                    Ancho
+                  </span>
                   <input
                     type="number"
                     min={40}
@@ -491,7 +512,11 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
                     step={10}
                     value={selected.width}
                     onChange={(e) => {
-                      const width = clamp(Number(e.target.value) || 40, 40, 600);
+                      const width = clamp(
+                        Number(e.target.value) || 40,
+                        40,
+                        600,
+                      );
                       patch(selected.id, {
                         width,
                         height:
@@ -504,7 +529,9 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
                   />
                 </label>
                 <label className="grid gap-1">
-                  <span className="text-xs text-[var(--color-muted)]">Alto</span>
+                  <span className="text-xs text-[var(--color-muted)]">
+                    Alto
+                  </span>
                   <input
                     type="number"
                     min={40}
@@ -572,7 +599,9 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
               </div>
 
               <label className="grid gap-1">
-                <span className="text-xs text-[var(--color-muted)]">Sector</span>
+                <span className="text-xs text-[var(--color-muted)]">
+                  Sector
+                </span>
                 <select
                   value={selected.sector_id ?? ""}
                   onChange={(e) =>
@@ -597,7 +626,7 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
                     () => {
                       setSelectedId(null);
                       router.refresh();
-                    }
+                    },
                   )
                 }
                 className="mt-1 rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted)] transition-colors hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:opacity-50"

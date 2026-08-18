@@ -107,7 +107,7 @@ export function CatalogManager({ products }: { products: Product[] }) {
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-xl border border-[var(--color-border)]">
+      <div className="overflow-x-auto rounded-xl border border-[var(--color-border)]">
         <table className="w-full text-sm">
           <thead className="bg-[var(--color-surface)] text-left text-xs tracking-wide text-[var(--color-muted)] uppercase">
             <tr>

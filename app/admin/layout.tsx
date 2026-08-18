@@ -34,12 +34,12 @@ export default async function AdminLayout({
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-30 border-b border-[var(--color-border)] bg-[var(--color-bg)]/95 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
           <Link href="/admin" className="font-semibold tracking-tight">
             POS <span className="text-[var(--color-accent)]">Punta Carretas</span>
           </Link>
 
-          <nav className="flex items-center gap-1 text-sm">
+          <nav className="flex flex-wrap items-center gap-1 text-sm">
             <Link
               href="/admin"
               className="rounded-lg px-3 py-1.5 text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-ink)]"

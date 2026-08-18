@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { FloorTable } from "./floor-table";
-import { CANVAS_H, CANVAS_W } from "@/lib/floor";
+import { CANVAS_H, CANVAS_W, fitScale } from "@/lib/floor";
 import {
   addProductToTable,
   changeItemQuantity,
@@ -18,6 +18,7 @@ import {
 import {
   CATEGORY_LABELS,
   formatMoney,
+  hasRank,
   PAYMENT_LABELS,
   PAYMENT_METHODS,
   type PaymentMethod,
@@ -26,8 +27,14 @@ import {
   type Product,
   type ProductCategory,
   type Sector,
+  type StaffRole,
   type TableDetail,
 } from "@/lib/types";
+
+/** Cómo se dibuja el salón. */
+type Vista = "plano" | "grilla";
+
+const VISTA_KEY = "pos-vista-salon";
 
 /** Líneas que todavía esperan a la barra o a la cocina. */
 function pendientesDe(items: OrderItemWithProduct[]): number {
@@ -45,6 +52,8 @@ type Props = {
   /** Sin turno de caja abierto no se puede cobrar. */
   hasOpenShift: boolean;
   sectors: Sector[];
+  /** Nivel de quien mira: decide con qué vista arranca la pantalla. */
+  role: StaffRole;
   /** Motivo por el que la pantalla anterior lo mandó para acá, si lo hubo. */
   notice?: string | null;
 };
@@ -59,6 +68,7 @@ export function SalonBoard({
   pendingAlerts,
   hasOpenShift,
   sectors,
+  role,
   notice,
 }: Props) {
   const router = useRouter();
@@ -73,9 +83,33 @@ export function SalonBoard({
     ...(huerfanas ? [{ id: null, name: "Sin sector" }] : []),
   ];
 
-  const [sectorId, setSectorId] = useState<string | null>(
-    tabs[0]?.id ?? null
+  const [sectorId, setSectorId] = useState<string | null>(tabs[0]?.id ?? null);
+
+  /**
+   * Vista por defecto según el nivel.
+   *
+   * El plano es una herramienta de quien maneja el salón desde una pantalla
+   * fija: sirve para ubicar la mesa en el espacio. El mozo la mira desde el
+   * celular, en movimiento, y lo que necesita es encontrar la mesa 7 rápido,
+   * no ubicarla contra la ventana. Cada uno arranca con lo suyo y puede
+   * cambiar; la elección queda guardada en ese dispositivo.
+   */
+  const [vista, setVista] = useState<Vista>(
+    hasRank(role, "admin") ? "plano" : "grilla",
   );
+
+  // Se lee después del primer render a propósito: el servidor no conoce el
+  // localStorage y pintar distinto de lo que ya está en pantalla rompe la
+  // hidratación.
+  useEffect(() => {
+    const guardada = window.localStorage.getItem(VISTA_KEY);
+    if (guardada === "plano" || guardada === "grilla") setVista(guardada);
+  }, []);
+
+  function cambiarVista(next: Vista) {
+    setVista(next);
+    window.localStorage.setItem(VISTA_KEY, next);
+  }
 
   // El plano se guarda en unidades fijas y cada pantalla lo escala a su ancho:
   // el mismo salón se ve igual en el monitor de la caja y en la tablet.
@@ -86,15 +120,15 @@ export function SalonBoard({
     const el = wrapRef.current;
     if (!el) return;
     const ro = new ResizeObserver(([entry]) => {
-      setScale(Math.min(1, entry.contentRect.width / CANVAS_W));
+      setScale(fitScale(entry.contentRect.width));
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [vista]);
 
   const selected = useMemo(
     () => tables.find((t) => t.table.id === selectedId) ?? null,
-    [tables, selectedId]
+    [tables, selectedId],
   );
 
   // Varios mozos operan a la vez desde distintos dispositivos: cualquier cambio
@@ -106,17 +140,17 @@ export function SalonBoard({
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "tables" },
-        () => router.refresh()
+        () => router.refresh(),
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "orders" },
-        () => router.refresh()
+        () => router.refresh(),
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "order_items" },
-        () => router.refresh()
+        () => router.refresh(),
       )
       .subscribe();
 
@@ -132,6 +166,7 @@ export function SalonBoard({
     }
   }, [tables, selectedId]);
 
+  const visibles = tables.filter((t) => t.table.sector_id === sectorId);
   const ocupadas = tables.filter((t) => t.table.status === "ocupada").length;
   const enSalon = tables.reduce((sum, t) => sum + (t.order?.total ?? 0), 0);
   const conComanda = tables.filter((t) => pendientesDe(t.items) > 0).length;
@@ -152,13 +187,32 @@ export function SalonBoard({
               ) : null}
             </p>
           </div>
-          <div className="text-right">
-            <p className="text-xs tracking-wide text-[var(--color-muted)] uppercase">
-              Sin cobrar
-            </p>
-            <p className="text-xl font-semibold tabular-nums">
-              {formatMoney(enSalon)}
-            </p>
+          <div className="flex items-center gap-4">
+            <div className="flex rounded-lg border border-[var(--color-border)] p-0.5">
+              {(["plano", "grilla"] as Vista[]).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => cambiarVista(v)}
+                  className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
+                    vista === v
+                      ? "bg-[var(--color-surface-2)] text-[var(--color-ink)]"
+                      : "text-[var(--color-muted)] hover:text-[var(--color-ink)]"
+                  }`}
+                >
+                  {v === "plano" ? "Plano" : "Lista"}
+                </button>
+              ))}
+            </div>
+
+            <div className="text-right">
+              <p className="text-xs tracking-wide text-[var(--color-muted)] uppercase">
+                Sin cobrar
+              </p>
+              <p className="text-xl font-semibold tabular-nums">
+                {formatMoney(enSalon)}
+              </p>
+            </div>
           </div>
         </header>
 
@@ -198,7 +252,7 @@ export function SalonBoard({
           <div className="mb-3 flex flex-wrap items-center gap-1">
             {tabs.map((tab) => {
               const cuantas = tables.filter(
-                (t) => t.table.sector_id === tab.id
+                (t) => t.table.sector_id === tab.id,
               ).length;
 
               return (
@@ -222,26 +276,11 @@ export function SalonBoard({
           </div>
         ) : null}
 
-        <div
-          ref={wrapRef}
-          // El escalado es una transformación y no encoge la caja: sin fijarle
-          // la altura, el plano deja un hueco enorme debajo.
-          style={{ height: CANVAS_H * scale }}
-          className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]"
-        >
-          <div
-            className="relative origin-top-left"
-            style={{
-              width: CANVAS_W,
-              height: CANVAS_H,
-              transform: `scale(${scale})`,
-            }}
-          >
-            {tables
-              .filter((detail) => detail.table.sector_id === sectorId)
-              .map((detail) => (
-                <FloorTableCard
-                  key={detail.table.id}
+        {vista === "grilla" ? (
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+            {visibles.map((detail) => (
+              <li key={detail.table.id}>
+                <GridTableCard
                   detail={detail}
                   waiterName={
                     detail.table.assigned_waiter
@@ -254,9 +293,50 @@ export function SalonBoard({
                     setSelectedId(detail.table.id);
                   }}
                 />
-              ))}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div
+            ref={wrapRef}
+            // El escalado es una transformación y no encoge la caja: sin fijarle
+            // la altura, el plano deja un hueco enorme debajo.
+            style={{ height: CANVAS_H * scale }}
+            className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]"
+          >
+            {/* La escala es una transformación: no cambia el tamaño que el div
+              ocupa en el layout. Sin esta caja intermedia con la medida ya
+              escalada, en el celular queda medio ancho de plano vacío para
+              desplazar al costado. */}
+            <div style={{ width: CANVAS_W * scale, height: CANVAS_H * scale }}>
+              <div
+                className="relative origin-top-left"
+                style={{
+                  width: CANVAS_W,
+                  height: CANVAS_H,
+                  transform: `scale(${scale})`,
+                }}
+              >
+                {visibles.map((detail) => (
+                  <FloorTableCard
+                    key={detail.table.id}
+                    detail={detail}
+                    waiterName={
+                      detail.table.assigned_waiter
+                        ? waiters[detail.table.assigned_waiter]
+                        : undefined
+                    }
+                    alerts={pendingAlerts[detail.table.id] ?? []}
+                    onSelect={() => {
+                      setError(null);
+                      setSelectedId(detail.table.id);
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </main>
 
       {selected ? (
@@ -276,6 +356,91 @@ export function SalonBoard({
         />
       ) : null}
     </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+/**
+ * La mesa como tarjeta, para la vista de lista.
+ *
+ * Es la que ve el mozo por defecto: en un celular, una grilla de tarjetas
+ * grandes se lee y se toca mejor que un plano al que hay que hacerle zoom.
+ */
+function GridTableCard({
+  detail,
+  waiterName,
+  alerts,
+  onSelect,
+}: {
+  detail: TableDetail;
+  waiterName?: string;
+  alerts: AlertType[];
+  onSelect: () => void;
+}) {
+  const { table, order, items } = detail;
+  const ocupada = table.status === "ocupada";
+  const unidades = items.reduce((n, i) => n + i.quantity, 0);
+  const pendientes = pendientesDe(items);
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={`relative flex h-full w-full flex-col items-start gap-1 rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 ${
+        !ocupada
+          ? "border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-free)]/60"
+          : pendientes > 0
+            ? "border-[var(--color-accent)]/60 bg-[var(--color-accent)]/10 hover:border-[var(--color-accent)]"
+            : "border-[var(--color-busy)]/50 bg-[var(--color-busy)]/10 hover:border-[var(--color-busy)]"
+      }`}
+    >
+      {alerts.length > 0 ? (
+        <span
+          aria-label="Mesa con llamado pendiente"
+          className="absolute -top-1.5 -right-1.5 flex size-6 items-center justify-center rounded-full bg-[var(--color-danger)] text-xs font-bold text-white"
+        >
+          <span className="absolute inset-0 animate-ping rounded-full bg-[var(--color-danger)]/60" />
+          <span className="relative">{alerts.length}</span>
+        </span>
+      ) : null}
+
+      <div className="flex w-full items-center justify-between">
+        <span className="text-2xl font-semibold tabular-nums">
+          {table.number}
+        </span>
+        <span
+          className={`size-2.5 rounded-full ${
+            !ocupada
+              ? "bg-[var(--color-free)]"
+              : pendientes > 0
+                ? "animate-pulse bg-[var(--color-accent)]"
+                : "bg-[var(--color-busy)]"
+          }`}
+        />
+      </div>
+
+      {ocupada && order ? (
+        <>
+          <span className="text-lg font-medium tabular-nums">
+            {formatMoney(order.total)}
+          </span>
+          <span className="text-xs text-[var(--color-muted)]">
+            {unidades} {unidades === 1 ? "ítem" : "ítems"}
+            {waiterName ? ` · ${waiterName}` : ""}
+          </span>
+          {pendientes > 0 ? (
+            <span className="text-xs font-medium text-[var(--color-accent)]">
+              {pendientes} sin entregar
+            </span>
+          ) : null}
+        </>
+      ) : (
+        <span className="text-sm text-[var(--color-muted)]">
+          Libre · {table.seats} 🪑
+        </span>
+      )}
+    </button>
   );
 }
 
@@ -388,7 +553,7 @@ function TablePanel({
     return products.filter(
       (p) =>
         (category === "todos" || p.category === category) &&
-        (term === "" || p.name.toLowerCase().includes(term))
+        (term === "" || p.name.toLowerCase().includes(term)),
     );
   }, [products, category, search]);
 
@@ -576,7 +741,9 @@ function TablePanel({
                       }
                       className="flex h-full w-full flex-col items-start gap-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 text-left transition-colors hover:border-[var(--color-accent)] active:bg-[var(--color-surface-2)] disabled:opacity-50"
                     >
-                      <span className="text-sm leading-tight">{product.name}</span>
+                      <span className="text-sm leading-tight">
+                        {product.name}
+                      </span>
                       <span className="mt-auto text-sm font-semibold tabular-nums text-[var(--color-accent)]">
                         {formatMoney(product.price)}
                       </span>

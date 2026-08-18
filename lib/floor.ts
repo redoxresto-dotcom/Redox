@@ -19,6 +19,22 @@ const CHAIR_GAP = 14;
 export const CHAIR_W = 22;
 export const CHAIR_H = 16;
 
+/**
+ * Escala a la que dibujar el plano dentro de un contenedor de `width` píxeles.
+ *
+ * Encoger hasta que entre siempre suena bien hasta que alguien lo abre en un
+ * celular: a 360 px de ancho el plano entero entraría al 26%, con mesas de
+ * treinta píxeles que no se leen ni se tocan. Por debajo del mínimo se deja de
+ * achicar y el plano se desplaza de costado, que es preferible a una maqueta
+ * ilegible.
+ */
+export const MIN_SCALE = 0.5;
+
+export function fitScale(width: number): number {
+  if (width <= 0) return 1;
+  return Math.min(1, Math.max(width / CANVAS_W, MIN_SCALE));
+}
+
 export function snap(value: number): number {
   return Math.round(value / GRID) * GRID;
 }

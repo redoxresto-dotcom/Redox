@@ -41,7 +41,7 @@ export default async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { pathname, search } = request.nextUrl;
+  const { pathname, search, searchParams } = request.nextUrl;
 
   // Las pantallas de barra y cocina son personal, igual que el panel: quedan
   // detrás del mismo guard.
@@ -57,10 +57,34 @@ export default async function proxy(request: NextRequest) {
   }
 
   if (user && pathname === "/login") {
-    const admin = request.nextUrl.clone();
-    admin.pathname = "/admin";
-    admin.search = "";
-    return NextResponse.redirect(admin);
+    // Quien está dado de baja conserva una sesión de Auth perfectamente válida
+    // —Auth no sabe nada de profiles.active— pero el guard del layout no lo
+    // deja entrar. Si lo mandáramos igual a /admin, ese guard lo devolvería
+    // acá y quedaría rebotando entre las dos pantallas hasta que el navegador
+    // corta y deja la pantalla en negro.
+    //
+    // La consulta corre solo cuando alguien con sesión abre /login, que es un
+    // caso raro. La RLS lo permite: cada uno puede leer su propio perfil.
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("active")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile?.active) {
+      const admin = request.nextUrl.clone();
+      admin.pathname = "/admin";
+      admin.search = "";
+      return NextResponse.redirect(admin);
+    }
+
+    // Dado de baja o sin perfil: se le muestra el login con el motivo, y desde
+    // ahí puede entrar con otro usuario.
+    if (!searchParams.get("error")) {
+      const login = request.nextUrl.clone();
+      login.searchParams.set("error", "sin-acceso");
+      return NextResponse.redirect(login);
+    }
   }
 
   return response;

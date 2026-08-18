@@ -45,6 +45,8 @@ type Props = {
   /** Sin turno de caja abierto no se puede cobrar. */
   hasOpenShift: boolean;
   sectors: Sector[];
+  /** Motivo por el que la pantalla anterior lo mandó para acá, si lo hubo. */
+  notice?: string | null;
 };
 
 const CATEGORIES: ProductCategory[] = ["bebida", "comida", "otro"];
@@ -57,6 +59,7 @@ export function SalonBoard({
   pendingAlerts,
   hasOpenShift,
   sectors,
+  notice,
 }: Props) {
   const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -165,6 +168,15 @@ export function SalonBoard({
             className="mb-4 rounded-lg border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 px-3 py-2 text-sm text-[var(--color-danger)]"
           >
             {error}
+          </p>
+        ) : null}
+
+        {notice ? (
+          <p
+            role="status"
+            className="mb-4 rounded-lg border border-[var(--color-busy)]/40 bg-[var(--color-busy)]/10 px-3 py-2 text-sm text-[var(--color-busy)]"
+          >
+            {notice}
           </p>
         ) : null}
 

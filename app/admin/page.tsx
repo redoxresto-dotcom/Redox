@@ -15,10 +15,25 @@ import type {
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Motivos por los que alguien puede terminar acá rebotado desde otra pantalla.
+ * Sin esto el rebote es mudo: la URL dice el motivo y nadie lo lee.
+ */
+const ERRORS: Record<string, string> = {
+  "solo-admin": "Esa pantalla es de administradores.",
+  "solo-gerente":
+    "La administración de usuarios es del gerente. Pedísela a quien tenga ese nivel.",
+};
+
 type OrderWithItems = Order & { order_items: OrderItemWithProduct[] };
 
-export default async function SalonPage() {
+export default async function SalonPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   const profile = await requireStaff();
+  const { error } = await searchParams;
   const supabase = await getSupabaseServerClient();
 
   const [
@@ -97,6 +112,7 @@ export default async function SalonPage() {
       currentUserId={profile.id}
       pendingAlerts={pendingAlerts}
       hasOpenShift={Boolean(shiftRes.data)}
+      notice={error ? (ERRORS[error] ?? null) : null}
       sectors={(sectorsRes.data ?? []) as Sector[]}
     />
   );

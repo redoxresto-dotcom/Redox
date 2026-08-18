@@ -33,7 +33,10 @@ export async function signIn(
     };
   }
 
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
 
   if (error) {
     // Credenciales equivocadas: se responde en genérico a propósito. Decir
@@ -60,6 +63,26 @@ export async function signIn(
       error: `No se pudo contactar al servidor de autenticación (${
         error.code ?? error.status ?? "sin código"
       }). No es tu contraseña: avisale a quien administra el sistema.`,
+    };
+  }
+
+  // La contraseña es correcta, pero el usuario puede estar dado de baja: Auth
+  // no sabe nada de profiles.active. Sin este control la sesión queda abierta,
+  // el guard del layout lo rebota, y el motivo se pierde por el camino.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("active")
+    .eq("id", data.user.id)
+    .maybeSingle<{ active: boolean }>();
+
+  if (!profile?.active) {
+    // Se cierra la sesión recién abierta: dejarla viva es lo que hacía rebotar
+    // al usuario entre /login y /admin hasta que el navegador cortaba.
+    await supabase.auth.signOut();
+
+    return {
+      error:
+        "Tu usuario está dado de baja. Contactate con el encargado o con el soporte técnico.",
     };
   }
 

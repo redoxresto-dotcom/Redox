@@ -2,7 +2,7 @@ import { LoginForm } from "./login-form";
 
 const ERRORS: Record<string, string> = {
   "sin-acceso":
-    "Tu usuario no tiene acceso al salón. Pedile a un administrador que lo habilite.",
+    "Tu usuario está dado de baja y no tiene acceso al salón. Contactate con el encargado o con el soporte técnico.",
 };
 
 export default async function LoginPage({

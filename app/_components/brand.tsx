@@ -7,11 +7,8 @@ import Image from "next/image";
  * en las pantallas —encabezado, ingreso, la mesa del cliente— y el producto
  * solo firma abajo del ingreso.
  *
- * El logo es un PNG con transparencia real, así que se apoya sobre cualquier
- * fondo sin trucos. La mascota todavía viene en JPEG con el negro quemado, y
- * esa sí se compone con `mix-blend-screen`: sobre fondo oscuro el negro del
- * archivo desaparece y queda solo el dibujo. El día que llegue en PNG, se le
- * saca esa clase y queda igual de limpia.
+ * Los dos archivos son PNG con transparencia real, así que se apoyan sobre
+ * cualquier fondo sin trucos de composición.
  */
 
 /** El logo original. Va donde hay lugar para que se lea: ingreso y portada. */
@@ -28,22 +25,38 @@ export function RedoxLogo({ width = 260 }: { width?: number }) {
 }
 
 /**
- * La mascota. Es la cara del bar para el cliente que escanea el QR.
+ * El Dr. Redox de fondo, en la pantalla del cliente.
  *
- * El alto se maneja por CSS y no por props: en un celular chico la pantalla
- * tiene que entrar entera —los dos botones de llamado no pueden quedar abajo
- * del pliegue— y en uno grande sobra lugar para que se luzca.
+ * Va detrás de todo, muy tenue y sin capturar toques: esa pantalla existe para
+ * llamar al mozo, y una marca de agua que le reste contraste a esos botones
+ * —o que se coma un toque— sería un adorno caro.
+ *
+ * Se ancla al viewport y no al contenido: así queda centrada en la pantalla
+ * del celular sin importar cuánto mida la página.
  */
-export function RedoxMascota({ className = "" }: { className?: string }) {
+export function RedoxMascotaFondo() {
   return (
-    <Image
-      src="/redox-mascota.jpg"
-      alt="La mascota de Redox: un mojito con guardapolvo y tubo de ensayo"
-      width={112}
-      height={168}
-      priority
-      className={`mix-blend-screen ${className}`}
-    />
+    <div
+      aria-hidden
+      className="pointer-events-none fixed inset-0 z-0 flex items-center justify-center overflow-hidden select-none"
+    >
+      {/*
+        Las medidas declaradas no son las del archivo: con las del original
+        (1080x1920) Next arma un srcset de 1x y 2x y termina pidiendo una
+        versión de 3840px de ancho para dibujarla a 375. `sizes` le dice cuánto
+        mide de verdad en pantalla, y con calidad baja alcanza y sobra: se ve
+        al 7% de opacidad.
+      */}
+      <Image
+        src="/redox-mascota.png"
+        alt=""
+        width={540}
+        height={960}
+        sizes="(max-width: 640px) 400px, 700px"
+        quality={55}
+        className="h-[82vh] w-auto opacity-[0.10]"
+      />
+    </div>
   );
 }
 

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { callStaff } from "./actions";
-import { RedoxFlask, RedoxMascota } from "../../_components/brand";
+import { RedoxFlask, RedoxMascotaFondo } from "../../_components/brand";
 import {
   CATEGORY_LABELS,
   formatMoney,
@@ -121,97 +121,99 @@ export function TableClient({
   }
 
   return (
-    <main className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col px-5 py-8">
-      <header className="flex flex-col items-center text-center">
-        <RedoxMascota className="h-24 w-auto sm:h-40" />
+    <>
+      <RedoxMascotaFondo />
 
-        <p
-          className="mt-1 text-3xl font-semibold tracking-tight text-[var(--color-brand-soft)] italic"
-          style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
-        >
-          Redox
-        </p>
+      <main className="relative z-10 mx-auto flex min-h-[100dvh] w-full max-w-md flex-col px-5 py-8">
+        <header className="flex flex-col items-center text-center">
+          <p
+            className="text-4xl font-semibold tracking-tight text-[var(--color-brand-soft)] italic"
+            style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
+          >
+            Redox
+          </p>
 
-        <div className="mt-5 flex items-baseline gap-3">
-          <span className="text-sm tracking-[0.2em] text-[var(--color-muted)] uppercase">
-            Mesa
-          </span>
-          <span className="text-6xl leading-none font-bold tabular-nums">
-            {tableNumber}
-          </span>
-        </div>
-      </header>
+          <div className="mt-5 flex items-baseline gap-3">
+            <span className="text-sm tracking-[0.2em] text-[var(--color-muted)] uppercase">
+              Mesa
+            </span>
+            <span className="text-6xl leading-none font-bold tabular-nums">
+              {tableNumber}
+            </span>
+          </div>
+        </header>
 
-      {error ? (
-        <p
-          role="alert"
-          className="mt-6 rounded-xl border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 px-4 py-3 text-center text-sm text-[var(--color-danger)]"
-        >
-          {error}
-        </p>
-      ) : null}
+        {error ? (
+          <p
+            role="alert"
+            className="mt-6 rounded-xl border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 px-4 py-3 text-center text-sm text-[var(--color-danger)]"
+          >
+            {error}
+          </p>
+        ) : null}
 
-      <div className="mt-8 grid flex-1 content-center gap-4">
-        {BUTTONS.map((button) => {
-          const active = pending.includes(button.type);
-          const busy = sendingType === button.type;
+        <div className="mt-8 grid flex-1 content-center gap-4">
+          {BUTTONS.map((button) => {
+            const active = pending.includes(button.type);
+            const busy = sendingType === button.type;
 
-          return (
-            <button
-              key={button.type}
-              type="button"
-              onClick={() => send(button.type)}
-              disabled={active || isSending}
-              aria-live="polite"
-              className={`flex min-h-36 w-full flex-col items-center justify-center gap-2 rounded-3xl border-2 px-6 py-8 transition-colors ${
-                active
-                  ? "border-[var(--color-free)] bg-[var(--color-free)]/15"
-                  : "border-[var(--color-border)] bg-[var(--color-surface)] active:bg-[var(--color-surface-2)]"
-              } disabled:cursor-default`}
-            >
-              <span aria-hidden className="text-4xl">
-                {active ? "✓" : button.icon}
-              </span>
-
-              <span
-                className={`text-xl font-semibold ${
-                  active ? "text-[var(--color-free)]" : ""
-                }`}
+            return (
+              <button
+                key={button.type}
+                type="button"
+                onClick={() => send(button.type)}
+                disabled={active || isSending}
+                aria-live="polite"
+                className={`flex min-h-36 w-full flex-col items-center justify-center gap-2 rounded-3xl border-2 px-6 py-8 transition-colors ${
+                  active
+                    ? "border-[var(--color-free)] bg-[var(--color-free)]/15"
+                    : "border-[var(--color-border)] bg-[var(--color-surface)] active:bg-[var(--color-surface-2)]"
+                } disabled:cursor-default`}
               >
-                {busy ? "Avisando…" : active ? button.done : button.label}
-              </span>
+                <span aria-hidden className="text-4xl">
+                  {active ? "✓" : button.icon}
+                </span>
 
-              <span className="text-sm text-[var(--color-muted)]">
-                {active ? "Ya avisamos, aguardá un momento" : button.hint}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+                <span
+                  className={`text-xl font-semibold ${
+                    active ? "text-[var(--color-free)]" : ""
+                  }`}
+                >
+                  {busy ? "Avisando…" : active ? button.done : button.label}
+                </span>
 
-      {menu.length > 0 ? (
-        <button
-          type="button"
-          onClick={() => setVerCarta(true)}
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-4 text-lg font-medium active:bg-[var(--color-surface-2)]"
-        >
-          <span aria-hidden className="text-2xl">
-            📖
-          </span>
-          Ver la carta
-        </button>
-      ) : null}
+                <span className="text-sm text-[var(--color-muted)]">
+                  {active ? "Ya avisamos, aguardá un momento" : button.hint}
+                </span>
+              </button>
+            );
+          })}
+        </div>
 
-      {verCarta ? (
-        <Carta secciones={secciones} onClose={() => setVerCarta(false)} />
-      ) : null}
+        {menu.length > 0 ? (
+          <button
+            type="button"
+            onClick={() => setVerCarta(true)}
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-4 text-lg font-medium active:bg-[var(--color-surface-2)]"
+          >
+            <span aria-hidden className="text-2xl">
+              📖
+            </span>
+            Ver la carta
+          </button>
+        ) : null}
 
-      <footer className="pt-8 text-center text-xs text-[var(--color-muted)]">
-        {pending.length > 0
-          ? "Podés guardar el teléfono, ya estamos en camino."
-          : "Tocá un botón y un mozo se acerca a tu mesa."}
-      </footer>
-    </main>
+        {verCarta ? (
+          <Carta secciones={secciones} onClose={() => setVerCarta(false)} />
+        ) : null}
+
+        <footer className="pt-8 text-center text-xs text-[var(--color-muted)]">
+          {pending.length > 0
+            ? "Podés guardar el teléfono, ya estamos en camino."
+            : "Tocá un botón y un mozo se acerca a tu mesa."}
+        </footer>
+      </main>
+    </>
   );
 }
 

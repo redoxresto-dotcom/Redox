@@ -11,6 +11,16 @@
   --color-free: #22c55e;
   --color-busy: #f59e0b;
   --color-danger: #ef4444;
+
+  /*
+   * Cobre de Redox. Se usa SOLO en superficies de marca: ingreso, encabezado y
+   * la pantalla del cliente. La paleta de operación —celeste, ámbar, verde,
+   * rojo— no se toca: esos colores dicen en qué estado está una mesa y se leen
+   * de lejos. El cobre está muy cerca del ámbar, y usarlo de acento haría que
+   * "mesa ocupada" y "botón" se parezcan a tres metros.
+   */
+  --color-brand: #c98a5e;
+  --color-brand-soft: #e3ab82;
 }
 
 html,

@@ -1,6 +1,12 @@
-# POS Venta — Punta Carretas
+# Redox — Punta Carretas
 
-Punto de venta y gestión de salón para bar. Next.js 16 (App Router) + React 19 + Tailwind 4 + Supabase (PostgreSQL + Auth + Realtime).
+Sistema de gestión de salón, barra y cocina para el bar **Redox**, sobre
+**NexoRestUy**.
+
+Redox es el cliente y NexoRestUy es el producto: el nombre del bar manda en las
+pantallas —ingreso, encabezado y la mesa del cliente— y el sistema firma abajo
+del ingreso. Personalizarlo para otro local es cambiar los archivos de
+`public/` y el componente de marca. Next.js 16 (App Router) + React 19 + Tailwind 4 + Supabase (PostgreSQL + Auth + Realtime).
 
 ## Puesta en marcha
 
@@ -447,6 +453,11 @@ app/
       station-board.tsx   Tablero en vivo, relojes de espera y avisos
   api/pool-webhook/
     route.ts              Puente para el lector RFID de las mesas de pool
+app/_components/
+  brand.tsx               Logo, mascota y firma del sistema
+public/
+  redox-logo.jpg          Logo del bar
+  redox-mascota.jpg       Mascota, en la pantalla del cliente
 lib/
   auth.ts                 requireStaff() / requireAdmin() / requireManager()
   beep.ts                 Chirrido por Web Audio, compartido por las pantallas

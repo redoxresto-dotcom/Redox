@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireStaff } from "@/lib/auth";
 import { signOut } from "../login/actions";
+import { RedoxFlask } from "../_components/brand";
 
 /**
  * Chrome mínimo para las pantallas de estación.
@@ -20,6 +21,7 @@ export default async function EstacionLayout({
   return (
     <div className="flex min-h-screen flex-col">
       <header className="flex items-center gap-3 border-b border-[var(--color-border)] px-4 py-2">
+        <RedoxFlask size={20} />
         <Link
           href="/estacion"
           className="text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)]"

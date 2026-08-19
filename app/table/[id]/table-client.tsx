@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { callStaff } from "./actions";
+import { RedoxFlask, RedoxMascota } from "../../_components/brand";
 import {
   CATEGORY_LABELS,
   formatMoney,
@@ -84,8 +85,7 @@ export function TableClient({
         },
         (payload) => {
           const row = (payload.new ?? payload.old) as
-            | { type: AlertType; status: string }
-            | undefined;
+            { type: AlertType; status: string } | undefined;
           if (!row) return;
 
           setPending((prev) => {
@@ -93,7 +93,7 @@ export function TableClient({
             if (payload.eventType === "DELETE") return rest;
             return row.status === "pendiente" ? [...rest, row.type] : rest;
           });
-        }
+        },
       )
       .subscribe();
 
@@ -122,12 +122,24 @@ export function TableClient({
 
   return (
     <main className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col px-5 py-8">
-      <header className="text-center">
-        <p className="text-xs font-medium tracking-[0.2em] text-[var(--color-accent)] uppercase">
-          Punta Carretas
+      <header className="flex flex-col items-center text-center">
+        <RedoxMascota className="h-24 w-auto sm:h-40" />
+
+        <p
+          className="mt-1 text-3xl font-semibold tracking-tight text-[var(--color-brand-soft)] italic"
+          style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
+        >
+          Redox
         </p>
-        <h1 className="mt-4 text-6xl font-bold tabular-nums">{tableNumber}</h1>
-        <p className="mt-1 text-lg text-[var(--color-muted)]">Tu mesa</p>
+
+        <div className="mt-5 flex items-baseline gap-3">
+          <span className="text-sm tracking-[0.2em] text-[var(--color-muted)] uppercase">
+            Mesa
+          </span>
+          <span className="text-6xl leading-none font-bold tabular-nums">
+            {tableNumber}
+          </span>
+        </div>
       </header>
 
       {error ? (
@@ -243,6 +255,7 @@ function Carta({
       className="fixed inset-0 z-50 flex flex-col bg-[var(--color-bg)]"
     >
       <header className="sticky top-0 flex items-center gap-3 border-b border-[var(--color-border)] bg-[var(--color-bg)] px-5 py-4">
+        <RedoxFlask size={26} />
         <h2 className="text-2xl font-semibold">Carta</h2>
         <button
           type="button"

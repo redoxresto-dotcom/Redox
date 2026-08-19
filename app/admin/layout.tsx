@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireStaff } from "@/lib/auth";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { signOut } from "../login/actions";
+import { RedoxMark } from "../_components/brand";
 import { AlertMonitor } from "./_components/alert-monitor";
 import { redirect } from "next/navigation";
 import {
@@ -47,9 +48,8 @@ export default async function AdminLayout({
     <div className="min-h-screen">
       <header className="sticky top-0 z-30 border-b border-[var(--color-border)] bg-[var(--color-bg)]/95 backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
-          <Link href="/admin" className="font-semibold tracking-tight">
-            POS{" "}
-            <span className="text-[var(--color-accent)]">Punta Carretas</span>
+          <Link href="/admin" aria-label="Redox">
+            <RedoxMark size="sm" />
           </Link>
 
           {/*

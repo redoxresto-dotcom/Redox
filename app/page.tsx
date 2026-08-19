@@ -1,15 +1,13 @@
 import Link from "next/link";
+import { PoweredBy, RedoxLogo } from "./_components/brand";
 
 export default function Home() {
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col justify-center gap-8 px-6 py-16">
       <div>
-        <p className="text-sm font-medium tracking-widest text-[var(--color-accent)] uppercase">
-          Punta Carretas
-        </p>
-        <h1 className="mt-2 text-4xl font-semibold">POS Venta</h1>
-        <p className="mt-3 text-[var(--color-muted)]">
-          Punto de venta y gestión de salón.
+        <RedoxLogo width={280} />
+        <p className="mt-4 text-[var(--color-muted)]">
+          Gestión de salón, barra y cocina.
         </p>
       </div>
 
@@ -34,6 +32,8 @@ export default function Home() {
           </span>
         </Link>
       </div>
+
+      <PoweredBy />
     </main>
   );
 }

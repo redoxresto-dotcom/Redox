@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "POS Venta — Punta Carretas",
-  description: "Sistema de punto de venta y gestión de salón",
+  title: "Redox",
+  description: "Redox — gestión de salón, barra y cocina. Powered by NexoRestUy",
 };
 
 export const viewport: Viewport = {

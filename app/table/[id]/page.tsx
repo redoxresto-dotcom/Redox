@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const metadata: Metadata = {
-  title: "Tu mesa — Punta Carretas",
+  title: "Tu mesa — Redox",
   robots: { index: false, follow: false },
 };
 

@@ -1,4 +1,5 @@
 import { LoginForm } from "./login-form";
+import { PoweredBy, RedoxLogo } from "../_components/brand";
 
 const ERRORS: Record<string, string> = {
   "sin-acceso":
@@ -11,16 +12,16 @@ export default async function LoginPage({
   searchParams: Promise<{ redirect?: string; error?: string }>;
 }) {
   const params = await searchParams;
-  const redirectTo = params.redirect?.startsWith("/") ? params.redirect : "/admin";
+  const redirectTo = params.redirect?.startsWith("/") ? params.redirect : null;
   const notice = params.error ? ERRORS[params.error] : null;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-8 px-6 py-12">
-      <div>
-        <p className="text-xs font-medium tracking-widest text-[var(--color-accent)] uppercase">
+    <main className="mx-auto flex min-h-[100dvh] max-w-sm flex-col justify-center gap-8 px-6 py-12">
+      <div className="flex flex-col items-center gap-2">
+        <RedoxLogo width={260} />
+        <p className="text-[11px] tracking-[0.24em] text-[var(--color-muted)] uppercase">
           Punta Carretas
         </p>
-        <h1 className="mt-1.5 text-2xl font-semibold">Ingreso de mozos</h1>
       </div>
 
       {notice ? (
@@ -30,6 +31,8 @@ export default async function LoginPage({
       ) : null}
 
       <LoginForm redirectTo={redirectTo} />
+
+      <PoweredBy />
     </main>
   );
 }

@@ -17,14 +17,17 @@ function SubmitButton() {
   );
 }
 
-export function LoginForm({ redirectTo }: { redirectTo: string }) {
+export function LoginForm({ redirectTo }: { redirectTo: string | null }) {
   const [state, formAction] = useActionState<LoginState, FormData>(signIn, {
     error: null,
   });
 
   return (
     <form action={formAction} className="grid gap-4">
-      <input type="hidden" name="redirect" value={redirectTo} />
+      {/* Sin destino explícito, la acción manda a cada uno a su pantalla. */}
+      {redirectTo ? (
+        <input type="hidden" name="redirect" value={redirectTo} />
+      ) : null}
 
       <label className="grid gap-1.5">
         <span className="text-sm text-[var(--color-muted)]">Correo</span>

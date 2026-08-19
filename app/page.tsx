@@ -4,10 +4,13 @@ import { PoweredBy, RedoxLogo } from "./_components/brand";
 export default function Home() {
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col justify-center gap-8 px-6 py-16">
-      <div>
+      <div className="flex flex-col items-center text-center">
         <RedoxLogo width={320} />
-        <p className="mt-4 text-[var(--color-muted)]">
+        <p className="mt-2 text-[var(--color-muted)]">
           Gestión de salón, barra y cocina.
+        </p>
+        <p className="mt-1 text-[11px] tracking-[0.24em] text-[var(--color-muted)] uppercase">
+          Punta Carretas
         </p>
       </div>
 

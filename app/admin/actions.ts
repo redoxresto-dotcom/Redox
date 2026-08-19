@@ -309,6 +309,58 @@ function traducirMesa(mensaje: string): string {
   return "No se pudo cambiar la mesa: " + mensaje;
 }
 
+/**
+ * El mozo levantó la línea de la barra y la puso en la mesa.
+ *
+ * Es el corte que hace que el aviso de pedido completo se apague: sin él, la
+ * mesa queda pronta para siempre y el cartel deja de querer decir algo.
+ */
+export async function deliverItem(itemId: string): Promise<ActionResult> {
+  await requireStaff();
+  const supabase = await getSupabaseServerClient();
+
+  const { error } = await supabase
+    .from("order_items")
+    .update({ status: "entregado" })
+    .eq("id", itemId)
+    .eq("status", "listo");
+
+  if (error) return { error: "No se pudo marcar la entrega: " + error.message };
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/mis-mesas");
+  revalidatePath("/estacion", "layout");
+  return OK;
+}
+
+/** Todo lo que estaba pronto en esa mesa se fue junto en una bandeja. */
+export async function deliverTable(tableId: string): Promise<ActionResult> {
+  await requireStaff();
+  const supabase = await getSupabaseServerClient();
+
+  const { data: order } = await supabase
+    .from("orders")
+    .select("id")
+    .eq("table_id", tableId)
+    .eq("status", "abierta")
+    .maybeSingle<{ id: string }>();
+
+  if (!order) return { error: "La mesa no tiene una cuenta abierta." };
+
+  const { error } = await supabase
+    .from("order_items")
+    .update({ status: "entregado" })
+    .eq("order_id", order.id)
+    .eq("status", "listo");
+
+  if (error) return { error: "No se pudo marcar la entrega: " + error.message };
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/mis-mesas");
+  revalidatePath("/estacion", "layout");
+  return OK;
+}
+
 /** Marca una alerta del cliente como atendida. */
 export async function resolveAlert(alertId: string): Promise<ActionResult> {
   await requireStaff();

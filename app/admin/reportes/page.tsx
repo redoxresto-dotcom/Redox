@@ -1,6 +1,7 @@
 import { requireAdmin } from "@/lib/auth";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import {
+  getDeliveryTimes,
   getByHour,
   getByPayment,
   getByProduct,
@@ -14,7 +15,9 @@ import {
   formatMoney,
   isPaymentMethod,
   PAYMENT_LABELS,
+  STATION_LABELS,
   type Product,
+  type Station,
 } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -31,13 +34,14 @@ export default async function ReportesPage({
   const range = parseRange(params);
   const supabase = await getSupabaseServerClient();
 
-  const [resumen, medios, productos, horas, dias, catalogoRes] =
+  const [resumen, medios, productos, horas, dias, entregas, catalogoRes] =
     await Promise.all([
       getSummary(supabase, range),
       getByPayment(supabase, range),
       getByProduct(supabase, range),
       getByHour(supabase, range),
       getByWeekday(supabase, range),
+      getDeliveryTimes(supabase, range),
       supabase.from("products").select("id, name").eq("active", true),
     ]);
 
@@ -162,6 +166,52 @@ export default async function ReportesPage({
           )}
         </Card>
 
+        <Card title="Demora en llegar a la mesa">
+          {entregas.length === 0 ? (
+            <p className="py-6 text-center text-sm text-[var(--color-muted)]">
+              Todavía no hay entregas registradas en el período.
+            </p>
+          ) : (
+            <>
+              <ul className="grid gap-2">
+                {entregas.map((e) => (
+                  <li
+                    key={e.station}
+                    className="flex items-baseline justify-between gap-3 text-sm"
+                  >
+                    <span>
+                      {STATION_LABELS[e.station as Station] ?? e.station}
+                      <span className="ml-2 text-xs text-[var(--color-muted)]">
+                        {e.entregas} entrega
+                        {Number(e.entregas) === 1 ? "" : "s"}
+                      </span>
+                    </span>
+                    <span className="shrink-0 tabular-nums">
+                      <span
+                        className={`font-medium ${
+                          Number(e.promedio_min) >= 5
+                            ? "text-[var(--color-busy)]"
+                            : ""
+                        }`}
+                      >
+                        {Number(e.promedio_min)} min
+                      </span>
+                      <span className="ml-2 text-xs text-[var(--color-muted)]">
+                        peor {Number(e.peor_min)} min
+                      </span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-3 text-xs text-[var(--color-muted)]">
+                Cuánto pasa entre que la estación marca un ítem como pronto y
+                que el mozo lo deja en la mesa. Es la comida que se enfría
+                esperando sobre la barra.
+              </p>
+            </>
+          )}
+        </Card>
+
         <Card title="Más vendidos">
           {masVendidos.length === 0 ? (
             <Vacio />
@@ -236,18 +286,22 @@ export default async function ReportesPage({
           <Exportar range={range} tipo="productos" label="Por producto" />
           <Exportar range={range} tipo="medios" label="Por medio de pago" />
           <Exportar range={range} tipo="horas" label="Por franja horaria" />
-          <Exportar range={range} tipo="dias-semana" label="Por día de la semana" />
+          <Exportar
+            range={range}
+            tipo="dias-semana"
+            label="Por día de la semana"
+          />
         </div>
         <p className="mt-2 text-xs text-[var(--color-muted)]">
-          Salen en CSV con punto y coma y coma decimal: Excel en español los abre
-          de un doble clic, sin pasar por el asistente de importación.
+          Salen en CSV con punto y coma y coma decimal: Excel en español los
+          abre de un doble clic, sin pasar por el asistente de importación.
         </p>
       </section>
 
       <p className="mt-6 text-xs text-[var(--color-muted)]">
         Son reportes de venta: cuánto salió de cada cosa, cuándo y cómo se pagó.
-        No calculan rentabilidad por trago, porque el costo que hay cargado es el
-        del catálogo y no el de la última compra al proveedor. Para eso va el
+        No calculan rentabilidad por trago, porque el costo que hay cargado es
+        el del catálogo y no el de la última compra al proveedor. Para eso va el
         módulo de stock.
       </p>
     </main>

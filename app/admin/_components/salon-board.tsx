@@ -8,6 +8,8 @@ import { FloorTable } from "./floor-table";
 import { CANVAS_H, CANVAS_W, fitScale } from "@/lib/floor";
 import {
   addProductToTable,
+  deliverItem,
+  deliverTable,
   changeItemQuantity,
   closeOrder,
   openTable,
@@ -37,9 +39,74 @@ type Vista = "plano" | "grilla";
 
 const VISTA_KEY = "pos-vista-salon";
 
-/** Líneas que todavía esperan a la barra o a la cocina. */
-function pendientesDe(items: OrderItemWithProduct[]): number {
-  return items.filter((i) => i.status !== "listo").length;
+/**
+ * Cuatro estados por color, como los ve el encargado desde lejos.
+ *
+ * El verde es el pedido completo: barra y cocina terminaron todo lo de esa
+ * mesa y está esperando que el mozo lo levante. Mientras falte algo en una
+ * estación la mesa sigue celeste, aunque ya haya cosas prontas: media comanda
+ * pronta no es una bandeja para llevar.
+ */
+type EstadoMesa = "libre" | "abierta" | "preparando" | "pronto";
+
+function estadoDeMesa(detail: TableDetail): EstadoMesa {
+  if (detail.table.status !== "ocupada") return "libre";
+
+  const { enEstacion, porEntregar } = comandaDe(detail.items);
+  if (enEstacion > 0) return "preparando";
+  if (porEntregar > 0) return "pronto";
+  return "abierta";
+}
+
+const TONO_TARJETA: Record<EstadoMesa, string> = {
+  libre:
+    "border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-free)]/60",
+  abierta:
+    "border-[var(--color-busy)]/50 bg-[var(--color-busy)]/10 hover:border-[var(--color-busy)]",
+  preparando:
+    "border-[var(--color-accent)]/60 bg-[var(--color-accent)]/10 hover:border-[var(--color-accent)]",
+  pronto:
+    "border-[var(--color-free)] bg-[var(--color-free)]/15 hover:border-[var(--color-free)]",
+};
+
+const TONO_PLANO: Record<EstadoMesa, string> = {
+  libre:
+    "border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-muted)] hover:border-[var(--color-free)]",
+  abierta:
+    "border-[var(--color-busy)] bg-[var(--color-busy)]/15 text-[var(--color-ink)]",
+  preparando:
+    "border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-[var(--color-ink)]",
+  pronto:
+    "border-[var(--color-free)] bg-[var(--color-free)]/20 text-[var(--color-ink)]",
+};
+
+const PUNTO: Record<EstadoMesa, string> = {
+  libre: "bg-[var(--color-free)]",
+  abierta: "bg-[var(--color-busy)]",
+  preparando: "animate-pulse bg-[var(--color-accent)]",
+  pronto: "animate-pulse bg-[var(--color-free)]",
+};
+
+/**
+ * Los dos pendientes de una mesa, que son cosas distintas:
+ *
+ *   enEstacion  → la barra o la cocina todavía lo tienen
+ *   porEntregar → está pronto sobre la barra esperando al mozo
+ *
+ * Cuando no queda nada en estación y sí hay algo por entregar, el pedido está
+ * completo: es el cartel verde.
+ */
+function comandaDe(items: OrderItemWithProduct[]) {
+  const enEstacion = items.filter(
+    (i) => i.status === "pedido" || i.status === "preparando",
+  ).length;
+  const porEntregar = items.filter((i) => i.status === "listo").length;
+
+  return {
+    enEstacion,
+    porEntregar,
+    completo: enEstacion === 0 && porEntregar > 0,
+  };
 }
 
 type Props = {
@@ -194,7 +261,10 @@ export function SalonBoard({
   const visibles = delTurno.filter((t) => t.table.sector_id === sectorId);
   const ocupadas = delTurno.filter((t) => t.table.status === "ocupada").length;
   const enSalon = delTurno.reduce((sum, t) => sum + (t.order?.total ?? 0), 0);
-  const conComanda = delTurno.filter((t) => pendientesDe(t.items) > 0).length;
+  const enPreparacion = delTurno.filter(
+    (t) => comandaDe(t.items).enEstacion > 0,
+  ).length;
+  const prontas = delTurno.filter((t) => comandaDe(t.items).completo).length;
 
   return (
     <>
@@ -206,10 +276,16 @@ export function SalonBoard({
             </h1>
             <p className="text-sm text-[var(--color-muted)]">
               {ocupadas} de {delTurno.length} mesas ocupadas
-              {conComanda > 0 ? (
+              {enPreparacion > 0 ? (
                 <span className="text-[var(--color-accent)]">
                   {" · "}
-                  {conComanda} con comanda pendiente
+                  {enPreparacion} en preparación
+                </span>
+              ) : null}
+              {prontas > 0 ? (
+                <span className="font-medium text-[var(--color-free)]">
+                  {" · "}
+                  {prontas} {prontas === 1 ? "pronta" : "prontas"} para llevar
                 </span>
               ) : null}
             </p>
@@ -416,19 +492,14 @@ function GridTableCard({
   const { table, order, items } = detail;
   const ocupada = table.status === "ocupada";
   const unidades = items.reduce((n, i) => n + i.quantity, 0);
-  const pendientes = pendientesDe(items);
+  const comanda = comandaDe(items);
+  const estado = estadoDeMesa(detail);
 
   return (
     <button
       type="button"
       onClick={onSelect}
-      className={`relative flex h-full w-full flex-col items-start gap-1 rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 ${
-        !ocupada
-          ? "border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-free)]/60"
-          : pendientes > 0
-            ? "border-[var(--color-accent)]/60 bg-[var(--color-accent)]/10 hover:border-[var(--color-accent)]"
-            : "border-[var(--color-busy)]/50 bg-[var(--color-busy)]/10 hover:border-[var(--color-busy)]"
-      }`}
+      className={`relative flex h-full w-full flex-col items-start gap-1 rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 ${TONO_TARJETA[estado]}`}
     >
       {alerts.length > 0 ? (
         <span
@@ -444,15 +515,7 @@ function GridTableCard({
         <span className="text-2xl font-semibold tabular-nums">
           {table.number}
         </span>
-        <span
-          className={`size-2.5 rounded-full ${
-            !ocupada
-              ? "bg-[var(--color-free)]"
-              : pendientes > 0
-                ? "animate-pulse bg-[var(--color-accent)]"
-                : "bg-[var(--color-busy)]"
-          }`}
-        />
+        <span className={`size-2.5 rounded-full ${PUNTO[estado]}`} />
       </div>
 
       {ocupada && order ? (
@@ -464,9 +527,13 @@ function GridTableCard({
             {unidades} {unidades === 1 ? "ítem" : "ítems"}
             {waiterName ? ` · ${waiterName}` : ""}
           </span>
-          {pendientes > 0 ? (
+          {estado === "pronto" ? (
+            <span className="text-xs font-semibold text-[var(--color-free)]">
+              Pedido completo
+            </span>
+          ) : comanda.enEstacion > 0 ? (
             <span className="text-xs font-medium text-[var(--color-accent)]">
-              {pendientes} sin entregar
+              {comanda.enEstacion} en preparación
             </span>
           ) : null}
         </>
@@ -494,15 +561,9 @@ function FloorTableCard({
 }) {
   const { table, order, items } = detail;
   const ocupada = table.status === "ocupada";
-  // Tres estados por color, como los ve el encargado de lejos: libre, abierta,
-  // y abierta con algo que barra o cocina todavía no entregaron.
-  const pendientes = pendientesDe(items);
-
-  const tono = !ocupada
-    ? "border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-muted)] hover:border-[var(--color-free)]"
-    : pendientes > 0
-      ? "border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-[var(--color-ink)]"
-      : "border-[var(--color-busy)] bg-[var(--color-busy)]/15 text-[var(--color-ink)]";
+  const comanda = comandaDe(items);
+  const estado = estadoDeMesa(detail);
+  const tono = TONO_PLANO[estado];
 
   return (
     <FloorTable
@@ -533,9 +594,13 @@ function FloorTableCard({
         <span className="mt-0.5 text-[10px] opacity-70">{table.seats} 🪑</span>
       )}
 
-      {pendientes > 0 ? (
+      {estado === "pronto" ? (
+        <span className="mt-0.5 text-[10px] font-bold text-[var(--color-free)]">
+          COMPLETO
+        </span>
+      ) : comanda.enEstacion > 0 ? (
         <span className="mt-0.5 text-[10px] font-medium text-[var(--color-accent)]">
-          {pendientes} sin entregar
+          {comanda.enEstacion} en prep.
         </span>
       ) : null}
     </FloorTable>
@@ -600,6 +665,7 @@ function TablePanel({
 
   const total = order?.total ?? 0;
   const unidades = items.reduce((n, i) => n + i.quantity, 0);
+  const comanda = comandaDe(items);
 
   function cobrar(method: PaymentMethod) {
     if (!order) return;
@@ -709,6 +775,42 @@ function TablePanel({
           </div>
         ) : null}
 
+        {comanda.porEntregar > 0 ? (
+          <div
+            className={`flex flex-wrap items-center gap-3 border-b px-5 py-3 ${
+              comanda.completo
+                ? "border-[var(--color-free)]/40 bg-[var(--color-free)]/15"
+                : "border-[var(--color-border)] bg-[var(--color-surface)]"
+            }`}
+          >
+            <div>
+              <p
+                className={`font-semibold ${
+                  comanda.completo ? "text-[var(--color-free)]" : ""
+                }`}
+              >
+                {comanda.completo
+                  ? "Pedido completo"
+                  : `${comanda.porEntregar} pronto${comanda.porEntregar === 1 ? "" : "s"} para llevar`}
+              </p>
+              <p className="text-xs text-[var(--color-muted)]">
+                {comanda.completo
+                  ? "Salió todo: barra y cocina terminaron."
+                  : `Falta${comanda.enEstacion === 1 ? "" : "n"} ${comanda.enEstacion} en preparación.`}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={() => run(() => deliverTable(table.id))}
+              className="ml-auto rounded-lg bg-[var(--color-free)] px-4 py-2 text-sm font-semibold text-[#04140a] disabled:opacity-50"
+            >
+              Entregar {comanda.porEntregar === 1 ? "" : "todo"}
+            </button>
+          </div>
+        ) : null}
+
         {/* Cuenta */}
         <div className="max-h-[38%] overflow-y-auto border-b border-[var(--color-border)] px-5 py-3">
           {items.length === 0 ? (
@@ -725,7 +827,16 @@ function TablePanel({
                   <div className="min-w-0 flex-1">
                     <p className="flex items-center gap-2 truncate text-sm">
                       {item.product?.name ?? "Producto eliminado"}
-                      {item.status !== "listo" ? (
+                      {item.status === "listo" ? (
+                        <button
+                          type="button"
+                          disabled={isPending}
+                          onClick={() => run(() => deliverItem(item.id))}
+                          className="shrink-0 rounded-full bg-[var(--color-free)]/20 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-[var(--color-free)] uppercase transition-colors hover:bg-[var(--color-free)]/30 disabled:opacity-50"
+                        >
+                          entregar
+                        </button>
+                      ) : item.status !== "entregado" ? (
                         <span
                           className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] tracking-wide uppercase ${
                             item.status === "preparando"

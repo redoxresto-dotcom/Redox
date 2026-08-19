@@ -23,6 +23,7 @@ Ejecutar **en este orden**:
 | 10 | [`supabase/009_gerente.sql`](supabase/009_gerente.sql) | Rol gerente y jerarquía de permisos |
 | 11 | [`supabase/010_mesas_mozo.sql`](supabase/010_mesas_mozo.sql) | Tomar, transferir y soltar mesas |
 | 12 | [`supabase/011_estaciones_usuario.sql`](supabase/011_estaciones_usuario.sql) | Usuarios de barra y de cocina |
+| 13 | [`supabase/012_entregado.sql`](supabase/012_entregado.sql) | Estado «entregado» y pedido completo |
 
 Todos son idempotentes: se pueden volver a correr sin romper nada.
 
@@ -182,17 +183,38 @@ la barra se distinga un pedido de un llamado de mesa.
 Lo marcado como `ninguna` no genera comanda: nace listo y no aparece en ninguna
 pantalla.
 
-**Cada línea avanza `pedido` → `preparando` → `listo`.** Se puede saltar directo
-a listo (un trago que se sirve al toque) y se puede volver atrás, que es lo que
-salva un toque de más. Lo ya marcado como listo sigue visible 20 minutos para
-poder deshacerlo sin ir a buscar a la caja.
+**Cada línea avanza `pedido` → `preparando` → `listo` → `entregado`.** Los tres
+primeros los mueve la estación; el último, el mozo, cuando la levanta de la
+barra y la deja en la mesa.
+
+`listo` no significa terminado: significa **pronto sobre la barra esperando que
+alguien lo lleve**. Ese corte es el que hace que el aviso de pedido completo se
+pueda apagar, y de paso deja medido cuánto tarda un plato entre que está pronto
+y que llega a la mesa — la comida que se enfría esperando al mozo. Está en
+`/admin/reportes`, abierto por estación.
+
+**Cuando la barra y la cocina terminaron todo lo de una mesa, la mesa se pone
+verde y dice «pedido completo».** Mientras falte algo en una estación sigue
+celeste, aunque ya haya cosas prontas: media comanda pronta no es una bandeja
+para llevar.
+
+Se puede saltar directo a listo —un trago que se sirve al toque— y se puede
+volver atrás, que es lo que salva un toque de más. Lo ya marcado como listo
+sigue visible 20 minutos en la estación para poder deshacerlo sin ir a buscar a
+la caja; lo entregado desaparece y no vuelve.
 
 Una comanda que lleva más de **8 minutos** esperando se marca en ámbar; pasados
 **15**, en rojo y parpadeando. Los umbrales están en `lib/types.ts`
 (`ITEM_WARN_MINUTES` / `ITEM_LATE_MINUTES`).
 
-En el salón, la mesa queda en **celeste** mientras tenga algo sin entregar, en
-ámbar cuando está abierta con todo entregado, y sin color cuando está libre.
+En el salón la mesa tiene cuatro colores:
+
+| Color | Significa |
+|---|---|
+| sin color | Libre |
+| ámbar | Abierta, sin nada pendiente |
+| celeste | La barra o la cocina todavía tienen algo |
+| **verde** | **Pedido completo**: está todo pronto esperando al mozo |
 
 ## La carta del QR
 
@@ -447,4 +469,5 @@ supabase/
   009_gerente.sql         Rol gerente y jerarquía
   010_mesas_mozo.sql      Tomar, transferir y soltar mesas
   011_estaciones_usuario.sql  Usuarios de barra y de cocina
+  012_entregado.sql       Estado entregado y pedido completo
 ```

@@ -32,6 +32,12 @@ export type ProductRow = {
   total: number;
 };
 export type HourRow = { hour: number; tickets: number; total: number };
+export type DeliveryRow = {
+  station: string;
+  entregas: number;
+  promedio_min: number;
+  peor_min: number;
+};
 export type WeekdayRow = { weekday: number; tickets: number; total: number };
 export type DayRow = {
   day: string;
@@ -82,7 +88,7 @@ export function parseRange(params: Record<string, string | undefined>): Range {
 async function rpc<T>(
   supabase: Supabase,
   fn: string,
-  range: Range
+  range: Range,
 ): Promise<T[]> {
   const { data, error } = await supabase.rpc(fn, {
     p_from: range.from,
@@ -99,7 +105,7 @@ async function rpc<T>(
 
 export async function getSummary(
   supabase: Supabase,
-  range: Range
+  range: Range,
 ): Promise<SummaryRow> {
   const rows = await rpc<SummaryRow>(supabase, "report_summary", range);
   return rows[0] ?? { tickets: 0, total: 0, ticket_avg: 0, items_units: 0 };
@@ -115,6 +121,10 @@ export const getByWeekday = (s: Supabase, r: Range) =>
   rpc<WeekdayRow>(s, "report_by_weekday", r);
 export const getByDay = (s: Supabase, r: Range) =>
   rpc<DayRow>(s, "report_by_day", r);
+
+/** Minutos entre que un plato queda pronto y que llega a la mesa. */
+export const getDeliveryTimes = (s: Supabase, r: Range) =>
+  rpc<DeliveryRow>(s, "report_delivery_times", r);
 
 export const WEEKDAY_LABELS: Record<number, string> = {
   1: "Lunes",

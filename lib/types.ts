@@ -6,8 +6,16 @@ export type OrderStatus = "abierta" | "cobrada";
 export type AlertType = "llamar_mozo" | "pedir_cuenta";
 /** Quién prepara el producto. 'ninguna' = se cobra sin pasar por nadie. */
 export type Station = "barra" | "cocina" | "ninguna";
-/** Avance de una línea de la cuenta dentro de su estación. */
-export type ItemStatus = "pedido" | "preparando" | "listo";
+/**
+ * Avance de una línea de la cuenta.
+ *
+ *   pedido → preparando → listo → entregado
+ *          └ la estación ────┘   └ el mozo ┘
+ *
+ * «listo» no significa terminado: significa que está pronto sobre la barra
+ * esperando que alguien lo lleve a la mesa.
+ */
+export type ItemStatus = "pedido" | "preparando" | "listo" | "entregado";
 export type PaymentMethod =
   "efectivo" | "debito" | "credito" | "transferencia" | "otro";
 export type AlertStatus = "pendiente" | "resuelta";
@@ -116,8 +124,10 @@ export type OrderItem = {
   status: ItemStatus;
   started_at: string | null;
   ready_at: string | null;
+  delivered_at: string | null;
   started_by: string | null;
   ready_by: string | null;
+  delivered_by: string | null;
   created_by: string | null;
   created_at: string;
 };
@@ -181,7 +191,8 @@ export function isPaymentMethod(value: string): value is PaymentMethod {
 export const ITEM_STATUS_LABELS: Record<ItemStatus, string> = {
   pedido: "Pedido",
   preparando: "En preparación",
-  listo: "Listo",
+  listo: "Pronto para llevar",
+  entregado: "Entregado",
 };
 
 /**

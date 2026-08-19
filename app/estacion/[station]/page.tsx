@@ -55,6 +55,8 @@ export default async function StationPage({
     )
     .eq("station", station)
     .eq("order.status", "abierta")
+    // Lo entregado sale de la pantalla y no vuelve: ya está en la mesa.
+    .neq("status", "entregado")
     .or(`status.neq.listo,ready_at.gte.${since}`)
     .order("created_at");
 

@@ -4,13 +4,15 @@ import { revalidatePath } from "next/cache";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { requireManager } from "@/lib/auth";
-import { ROLE_RANK, type StaffRole } from "@/lib/types";
+import { ROLE_RANK, STAFF_ROLES, type StaffRole } from "@/lib/types";
 
 export type UserResult = { error: string | null };
 
 const OK: UserResult = { error: null };
 
-const ROLES: StaffRole[] = ["mozo", "admin", "gerente"];
+function esRol(valor: string): valor is StaffRole {
+  return (STAFF_ROLES as readonly string[]).includes(valor);
+}
 
 /**
  * Alta de personal.
@@ -33,7 +35,7 @@ export async function createStaff(formData: FormData): Promise<UserResult> {
     return { error: "La contraseña tiene que tener al menos 8 caracteres." };
   }
   if (!fullName) return { error: "Falta el nombre." };
-  if (!ROLES.includes(role)) return { error: "Rol desconocido." };
+  if (!esRol(role)) return { error: "Rol desconocido." };
 
   if (ROLE_RANK[role] >= ROLE_RANK[yo.role]) {
     return { error: "No podés crear un usuario de tu mismo nivel o superior." };
@@ -75,7 +77,7 @@ export async function changeRole(
 ): Promise<UserResult> {
   await requireManager();
 
-  if (!ROLES.includes(role)) return { error: "Rol desconocido." };
+  if (!esRol(role)) return { error: "Rol desconocido." };
 
   const supabase = await getSupabaseServerClient();
   const { error } = await supabase

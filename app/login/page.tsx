@@ -18,7 +18,7 @@ export default async function LoginPage({
   return (
     <main className="mx-auto flex min-h-[100dvh] max-w-sm flex-col justify-center gap-8 px-6 py-12">
       <div className="flex flex-col items-center gap-2">
-        <RedoxLogo width={260} />
+        <RedoxLogo width={320} />
         <p className="text-[11px] tracking-[0.24em] text-[var(--color-muted)] uppercase">
           Punta Carretas
         </p>

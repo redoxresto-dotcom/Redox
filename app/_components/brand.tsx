@@ -7,22 +7,22 @@ import Image from "next/image";
  * en las pantallas —encabezado, ingreso, la mesa del cliente— y el producto
  * solo firma abajo del ingreso.
  *
- * Los archivos de marca vienen con el fondo negro quemado en el JPEG, así que
- * se componen con `mix-blend-screen`: sobre un fondo oscuro, el negro del
- * archivo desaparece y queda solo el dibujo. Con un PNG de fondo transparente
- * se puede sacar ese truco.
+ * El logo es un PNG con transparencia real, así que se apoya sobre cualquier
+ * fondo sin trucos. La mascota todavía viene en JPEG con el negro quemado, y
+ * esa sí se compone con `mix-blend-screen`: sobre fondo oscuro el negro del
+ * archivo desaparece y queda solo el dibujo. El día que llegue en PNG, se le
+ * saca esa clase y queda igual de limpia.
  */
 
 /** El logo original. Va donde hay lugar para que se lea: ingreso y portada. */
 export function RedoxLogo({ width = 260 }: { width?: number }) {
   return (
     <Image
-      src="/redox-logo.jpg"
+      src="/redox-logo.png"
       alt="Redox"
       width={width}
-      height={Math.round((width * 1024) / 1536)}
+      height={Math.round((width * 1080) / 1920)}
       priority
-      className="mix-blend-screen"
     />
   );
 }

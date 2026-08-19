@@ -456,7 +456,7 @@ app/
 app/_components/
   brand.tsx               Logo, mascota y firma del sistema
 public/
-  redox-logo.jpg          Logo del bar
+  redox-logo.png          Logo del bar, con transparencia
   redox-mascota.jpg       Mascota, en la pantalla del cliente
 lib/
   auth.ts                 requireStaff() / requireAdmin() / requireManager()

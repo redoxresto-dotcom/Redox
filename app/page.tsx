@@ -5,7 +5,7 @@ export default function Home() {
   return (
     <main className="mx-auto flex min-h-screen max-w-2xl flex-col justify-center gap-8 px-6 py-16">
       <div>
-        <RedoxLogo width={280} />
+        <RedoxLogo width={320} />
         <p className="mt-4 text-[var(--color-muted)]">
           Gestión de salón, barra y cocina.
         </p>

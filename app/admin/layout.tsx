@@ -52,6 +52,11 @@ export default async function AdminLayout({
             <span className="text-[var(--color-accent)]">Punta Carretas</span>
           </Link>
 
+          {/*
+            El mozo ve dos opciones y nada más: el salón para tomar mesas y las
+            suyas para atenderlas. Barra y cocina tienen su propio usuario, que
+            entra directo a su pantalla; para el mozo son ruido.
+          */}
           <nav className="flex flex-wrap items-center gap-1 text-sm">
             <Link
               href="/admin"
@@ -65,26 +70,26 @@ export default async function AdminLayout({
             >
               Mis mesas
             </Link>
-            <Link
-              href="/estacion/barra"
-              className="rounded-lg px-3 py-1.5 text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-ink)]"
-            >
-              Barra
-            </Link>
-            <Link
-              href="/estacion/cocina"
-              className="rounded-lg px-3 py-1.5 text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-ink)]"
-            >
-              Cocina
-            </Link>
-            <Link
-              href="/admin/caja"
-              className="rounded-lg px-3 py-1.5 text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-ink)]"
-            >
-              Caja
-            </Link>
             {hasRank(profile.role, "admin") ? (
               <>
+                <Link
+                  href="/admin/caja"
+                  className="rounded-lg px-3 py-1.5 text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-ink)]"
+                >
+                  Caja
+                </Link>
+                <Link
+                  href="/estacion/barra"
+                  className="rounded-lg px-3 py-1.5 text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-ink)]"
+                >
+                  Barra
+                </Link>
+                <Link
+                  href="/estacion/cocina"
+                  className="rounded-lg px-3 py-1.5 text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-ink)]"
+                >
+                  Cocina
+                </Link>
                 <Link
                   href="/admin/catalogo"
                   className="rounded-lg px-3 py-1.5 text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-ink)]"

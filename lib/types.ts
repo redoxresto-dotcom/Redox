@@ -212,6 +212,46 @@ export function isPrepStation(value: string): value is "barra" | "cocina" {
   return value === "barra" || value === "cocina";
 }
 
+/**
+ * Estado en vivo de una mesa de pool, tal como lo devuelve `pool_status()`.
+ *
+ * Trae `ends_at` y no los segundos que faltan: el reloj lo corre cada pantalla
+ * por su cuenta. Un contador que viaja ya calculado nace viejo.
+ */
+export type PoolStatus = {
+  table_id: string;
+  table_number: number;
+  device_id: string;
+  session_id: string | null;
+  started_at: string | null;
+  ends_at: string | null;
+  order_id: string | null;
+  order_total: number | null;
+  purchased_minutes: number;
+  warning_minutes: number;
+  max_block_minutes: number;
+  last_seen_at: string | null;
+  relay_on: boolean | null;
+  hours_played: number;
+  felt_threshold_hours: number;
+};
+
+/** Bloques que se venden de un toque. Lo demás se escribe a mano. */
+export const POOL_BLOQUES = [30, 60, 120] as const;
+
+/**
+ * Si el aparato no dio señales en este rato, se lo da por caído. Pregunta cada
+ * 15 segundos como mucho, así que un minuto es holgado: no marca caído a uno
+ * que apenas se demoró.
+ */
+export const POOL_LECTOR_TIMEOUT_MS = 60_000;
+
+export function poolMinutosATexto(minutos: number): string {
+  if (minutos % 60 === 0) return `${minutos / 60} h`;
+  if (minutos < 60) return `${minutos} min`;
+  return `${Math.floor(minutos / 60)} h ${minutos % 60} min`;
+}
+
 export const TABLE_SHAPES: readonly TableShape[] = [
   "redonda",
   "cuadrada",

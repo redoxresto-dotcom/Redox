@@ -79,6 +79,12 @@ export default async function AdminLayout({
                   Caja
                 </Link>
                 <Link
+                  href="/admin/pool"
+                  className="rounded-lg px-3 py-1.5 text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-ink)]"
+                >
+                  Pool
+                </Link>
+                <Link
                   href="/estacion/barra"
                   className="rounded-lg px-3 py-1.5 text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-ink)]"
                 >

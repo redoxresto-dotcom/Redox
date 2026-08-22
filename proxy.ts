@@ -47,7 +47,9 @@ export default async function proxy(request: NextRequest) {
   // Las pantallas de barra y cocina son personal, igual que el panel: quedan
   // detrás del mismo guard.
   const esPrivada =
-    pathname.startsWith("/admin") || pathname.startsWith("/estacion");
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/estacion") ||
+    pathname.startsWith("/pool");
 
   if (!user && esPrivada) {
     const login = request.nextUrl.clone();

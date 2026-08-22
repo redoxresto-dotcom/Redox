@@ -30,6 +30,7 @@ Ejecutar **en este orden**:
 | 11 | [`supabase/010_mesas_mozo.sql`](supabase/010_mesas_mozo.sql) | Tomar, transferir y soltar mesas |
 | 12 | [`supabase/011_estaciones_usuario.sql`](supabase/011_estaciones_usuario.sql) | Usuarios de barra y de cocina |
 | 13 | [`supabase/012_entregado.sql`](supabase/012_entregado.sql) | Estado «entregado» y pedido completo |
+| 14 | [`supabase/013_pool.sql`](supabase/013_pool.sql) | Mesas de pool con tiempo prepago |
 
 Todos son idempotentes: se pueden volver a correr sin romper nada.
 
@@ -98,6 +99,8 @@ la interfaz:
 | Editar el plano del salón | ❌ | ❌ | ✅ | ✅ |
 | Editar catálogo (precios y costos) | ❌ | ❌ | ✅ | ✅ |
 | Alta, baja y cambio de nivel de usuarios | ❌ | ❌ | ❌ | ✅ |
+| Vender tiempo de pool y terminar partidas | ❌ | ✅ | ✅ | ✅ |
+| Configurar las mesas de pool | ❌ | ❌ | ✅ | ✅ |
 
 ### Barra y cocina son otro trabajo, no otro escalón
 
@@ -221,6 +224,65 @@ En el salón la mesa tiene cuatro colores:
 | ámbar | Abierta, sin nada pendiente |
 | celeste | La barra o la cocina todavía tienen algo |
 | **verde** | **Pedido completo**: está todo pronto esperando al mozo |
+
+## Las mesas de pool
+
+Se **vende tiempo** y la mesa se apaga sola al terminarse:
+
+```
+se vende 1 hora → la mesa se habilita → cuenta regresiva en pantalla
+→ aviso a los 5 minutos → se cumple el plazo y la mesa se apaga
+```
+
+No hay tarjetas: habilita alguien del personal desde **/admin/pool**, y el
+aparato de la mesa obedece.
+
+**La mesa de pool tiene su propia cuenta**, separada de la del salón: hay quien
+viene solo a jugar y no consume nada. Por eso tampoco aparece en el tablero del
+salón — vende tiempo, no comandas, y mezclarlas confunde dos trabajos distintos.
+
+**/pool** es la pantalla del televisor: un número grande por mesa, un color por
+estado y dos sonidos, uno al entrar en los últimos minutos y otro al cumplirse
+el tiempo.
+
+### Cómo se entera la mesa
+
+El servidor no puede llamar al ESP32: está detrás del router del bar, sin IP
+pública. Así que es al revés — el aparato **pregunta** cada pocos segundos a
+`/api/pool-device` y guarda la hora de corte que le contestan. La misma pregunta
+sirve de latido: si un aparato deja de preguntar, la tarjeta de esa mesa dice
+«sin señal».
+
+Tres reglas que la firmware tiene que respetar, y que están escritas también en
+la propia ruta:
+
+1. **Mandarse por `seconds_left`, no por `ends_at`.** Un ESP32 sin RTC arranca
+   con el reloj en cualquier lado, y comparar horas absolutas contra un reloj
+   equivocado apaga mesas que están pagas.
+2. **Seguir contando solo si no hay respuesta.** Un corte de red no puede
+   cortarle el juego a alguien que pagó.
+3. **Respetar `poll_seconds`.** El servidor decide el ritmo —15 s libre, 10 s
+   jugando, 3 s en los últimos dos minutos— y lo cambia sin tocar el firmware.
+
+Un aparato con un `device_id` que no tiene mesa asignada **falla cerrado**:
+queda en la bitácora y la mesa no se habilita.
+
+### El reloj no se guarda
+
+Se guarda `ends_at`, la hora de corte, y cada pantalla calcula cuánto falta. Un
+contador guardado como número que baja se desincroniza entre pantallas y se
+pierde al recargar.
+
+Por lo mismo, **las partidas vencidas las cierra quien pase**: el aparato al
+preguntar, el panel o el televisor al cargar. No hay tarea programada. Como la
+hora de cierre se toma del vencimiento y no del momento en que se ejecutó, el
+importe y la hora salen correctos aunque nadie mire hasta la mañana siguiente.
+
+### El paño
+
+Cada partida guarda los minutos que la mesa estuvo encendida, redondeados al
+minuto más cercano: ahí se **mide**, no se factura. Registrar un cambio de paño
+guarda las horas que tenía la mesa y reinicia el contador.
 
 ## La carta del QR
 
@@ -420,6 +482,10 @@ app/
       page.tsx            Personal y niveles (solo gerente)
       user-manager.tsx    Alta, baja, cambio de nivel
       actions.ts          createStaff / changeRole / setActive / deleteStaff
+    pool/
+      page.tsx            Las mesas de pool y su estado
+      pool-board.tsx      Vender tiempo, terminar partidas y ajustes
+      actions.ts          Venta, cierre, configuración y mantenimiento
     caja/
       page.tsx            Turno abierto, resumen por medio de pago e historial
       caja-client.tsx     Abrir turno, arqueo y cierre
@@ -451,8 +517,11 @@ app/
     [station]/
       page.tsx            Comandas de la estación, agrupadas por mesa
       station-board.tsx   Tablero en vivo, relojes de espera y avisos
-  api/pool-webhook/
-    route.ts              Puente para el lector RFID de las mesas de pool
+  pool/
+    page.tsx              Pantalla del televisor, para el salón
+    pool-tv.tsx           Cuenta regresiva grande por mesa
+  api/pool-device/
+    route.ts              Lo que pregunta el aparato de cada mesa
 app/_components/
   brand.tsx               Logo, mascota y firma del sistema
 public/
@@ -481,4 +550,5 @@ supabase/
   010_mesas_mozo.sql      Tomar, transferir y soltar mesas
   011_estaciones_usuario.sql  Usuarios de barra y de cocina
   012_entregado.sql       Estado entregado y pedido completo
+  013_pool.sql            Mesas de pool con tiempo prepago
 ```

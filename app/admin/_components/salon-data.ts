@@ -45,6 +45,7 @@ export async function loadSalon(): Promise<SalonData> {
     alertsRes,
     shiftRes,
     sectorsRes,
+    poolRes,
   ] = await Promise.all([
     supabase.from("tables").select("*").order("number"),
     supabase
@@ -59,11 +60,24 @@ export async function loadSalon(): Promise<SalonData> {
       .order("name"),
     supabase.from("profiles").select("id, full_name, role, active"),
     supabase.from("alerts").select("*").eq("status", "pendiente"),
-    supabase.from("cash_shifts").select("id").is("closed_at", null).maybeSingle(),
+    supabase
+      .from("cash_shifts")
+      .select("id")
+      .is("closed_at", null)
+      .maybeSingle(),
     supabase.from("sectors").select("*").order("sort_order").order("name"),
+    // Las mesas de pool se operan desde su propia pantalla: venden tiempo, no
+    // comandas. Mezclarlas en el salón confunde dos trabajos distintos.
+    supabase.from("pool_tables").select("table_id"),
   ]);
 
-  const tables = (tablesRes.data ?? []) as BarTable[];
+  const esDePool = new Set(
+    ((poolRes.data ?? []) as { table_id: string }[]).map((p) => p.table_id),
+  );
+
+  const tables = ((tablesRes.data ?? []) as BarTable[]).filter(
+    (t) => !esDePool.has(t.id),
+  );
   const orders = (ordersRes.data ?? []) as OrderWithItems[];
   const alerts = (alertsRes.data ?? []) as Alert[];
   const perfiles = (profilesRes.data ?? []) as Pick<

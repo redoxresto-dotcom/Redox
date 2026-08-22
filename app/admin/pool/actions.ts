@@ -61,6 +61,33 @@ export async function sellPoolTime(
   return OK;
 }
 
+/**
+ * Anota quiénes están jugando.
+ *
+ * Van en la partida: si compran más tiempo siguen siendo los mismos, y cuando
+ * entra otro grupo la partida nueva arranca en blanco sin que nadie borre nada.
+ */
+export async function setPoolPlayers(
+  sessionId: string,
+  one: string,
+  two: string,
+): Promise<PoolResult> {
+  await requireStaff();
+
+  const supabase = await getSupabaseServerClient();
+  const { error } = await supabase
+    .from("pool_sessions")
+    .update({ player_one: one, player_two: two })
+    .eq("id", sessionId)
+    .eq("status", "activa");
+
+  if (error) return { error: traducir(error.message, "No se pudo guardar") };
+
+  revalidatePath("/admin/pool");
+  revalidatePath("/pool");
+  return OK;
+}
+
 /** Corta una partida antes de tiempo: el grupo se fue. */
 export async function endPoolSession(sessionId: string): Promise<PoolResult> {
   await requireStaff();

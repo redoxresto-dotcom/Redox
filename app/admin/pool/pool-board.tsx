@@ -12,6 +12,7 @@ import {
   logPoolMaintenance,
   removePoolTable,
   sellPoolTime,
+  setPoolPlayers,
   updatePoolTable,
 } from "./actions";
 import {
@@ -198,6 +199,7 @@ export function PoolBoard({ estado, tarifa, candidatas, isManager }: Props) {
           {estado.map((mesa) => (
             <li key={mesa.table_id}>
               <MesaPool
+                key={mesa.session_id ?? "libre"}
                 mesa={mesa}
                 ahora={ahora}
                 isPending={isPending}
@@ -319,6 +321,34 @@ function MesaPool({
             {formatMoney(Number(mesa.order_total))}
           </span>
         </p>
+      ) : null}
+
+      {mesa.session_id ? (
+        <div className="mb-3 grid grid-cols-2 gap-1.5">
+          {(["player_one", "player_two"] as const).map((campo, i) => (
+            <input
+              key={campo}
+              // La clave incluye la partida: al entrar un grupo nuevo, el campo
+              // se vuelve a montar en blanco en vez de arrastrar el nombre
+              // anterior.
+              defaultValue={mesa[campo] ?? ""}
+              placeholder={`Jugador ${i + 1}`}
+              disabled={isPending}
+              onBlur={(e) => {
+                const valor = e.target.value.trim();
+                if (valor === (mesa[campo] ?? "")) return;
+                onRun(() =>
+                  setPoolPlayers(
+                    mesa.session_id!,
+                    campo === "player_one" ? valor : (mesa.player_one ?? ""),
+                    campo === "player_two" ? valor : (mesa.player_two ?? ""),
+                  ),
+                );
+              }}
+              className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2 py-1.5 text-sm outline-none focus:border-[var(--color-accent)] disabled:opacity-50"
+            />
+          ))}
+        </div>
       ) : null}
 
       <div className="mt-auto grid gap-2">

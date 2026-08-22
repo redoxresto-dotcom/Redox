@@ -225,6 +225,9 @@ export type PoolStatus = {
   session_id: string | null;
   started_at: string | null;
   ends_at: string | null;
+  /** Quiénes están jugando. Van en la partida, no en la mesa. */
+  player_one: string | null;
+  player_two: string | null;
   order_id: string | null;
   order_total: number | null;
   purchased_minutes: number;

@@ -162,6 +162,14 @@ export function PoolTv({ estado }: { estado: PoolStatus[] }) {
                     Mesa {mesa.table_number}
                   </p>
 
+                  {mesa.player_one || mesa.player_two ? (
+                    <p className="mt-1 text-lg text-[var(--color-brand-soft)]">
+                      {[mesa.player_one, mesa.player_two]
+                        .filter(Boolean)
+                        .join("  ·  ")}
+                    </p>
+                  ) : null}
+
                   <p
                     className={`my-3 text-7xl leading-none font-bold tabular-nums ${tinta}`}
                   >

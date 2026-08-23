@@ -37,8 +37,15 @@ create trigger trg_pool_players_limpios
 --  El estado en vivo los devuelve
 --
 --  Reemplaza la versión de la 013: agrega los dos nombres y conserva el resto.
+--
+--  Va con DROP antes del CREATE, y no alcanza con `create or replace`: cambiar
+--  las columnas que devuelve una función es cambiar su forma, y Postgres no
+--  deja reemplazarla en el lugar. El DROP es seguro porque a esta función no la
+--  usa nada dentro de la base — la llama la aplicación por RPC.
 -- =============================================================================
-create or replace function public.pool_status()
+drop function if exists public.pool_status();
+
+create function public.pool_status()
 returns table (
   table_id             uuid,
   table_number         integer,

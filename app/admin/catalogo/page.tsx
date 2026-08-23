@@ -1,7 +1,7 @@
 import { requireAdmin } from "@/lib/auth";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { CatalogManager } from "./catalog-manager";
-import type { Product } from "@/lib/types";
+import type { ComboComponent, Product } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -10,12 +10,34 @@ export default async function CatalogPage() {
   await requireAdmin();
 
   const supabase = await getSupabaseServerClient();
-  const { data } = await supabase
-    .from("products")
-    .select("*")
-    .order("active", { ascending: false })
-    .order("category")
-    .order("name");
+  const [productsRes, comboItemsRes] = await Promise.all([
+    supabase
+      .from("products")
+      .select("*")
+      .order("active", { ascending: false })
+      .order("category")
+      .order("name"),
+    supabase.from("combo_items").select("combo_id, component_id, quantity"),
+  ]);
 
-  return <CatalogManager products={(data ?? []) as Product[]} />;
+  const comboItems = (
+    (comboItemsRes.data ?? []) as {
+      combo_id: string;
+      component_id: string;
+      quantity: number;
+    }[]
+  ).reduce<Record<string, ComboComponent[]>>((acc, row) => {
+    (acc[row.combo_id] ??= []).push({
+      product_id: row.component_id,
+      quantity: row.quantity,
+    });
+    return acc;
+  }, {});
+
+  return (
+    <CatalogManager
+      products={(productsRes.data ?? []) as Product[]}
+      comboItems={comboItems}
+    />
+  );
 }

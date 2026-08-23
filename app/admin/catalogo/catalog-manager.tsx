@@ -11,6 +11,7 @@ import {
   CATEGORY_LABELS,
   formatMoney,
   STATION_LABELS,
+  type ComboComponent,
   type Product,
   type ProductCategory,
   type Station,
@@ -25,7 +26,14 @@ function margin(product: Product): number | null {
   return ((product.price - product.cost) / product.price) * 100;
 }
 
-export function CatalogManager({ products }: { products: Product[] }) {
+export function CatalogManager({
+  products,
+  comboItems,
+}: {
+  products: Product[];
+  /** id de combo → sus componentes con cantidad. */
+  comboItems: Record<string, ComboComponent[]>;
+}) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -97,6 +105,7 @@ export function CatalogManager({ products }: { products: Product[] }) {
       {creating ? (
         <div className="mb-4 rounded-xl border border-[var(--color-accent)]/40 bg-[var(--color-surface)] p-4">
           <ProductForm
+            products={products}
             disabled={isPending}
             onSubmit={(formData) =>
               run(() => createProduct(formData), () => setCreating(false))
@@ -147,6 +156,8 @@ export function CatalogManager({ products }: { products: Product[] }) {
                       <td colSpan={8} className="bg-[var(--color-surface)] px-4 py-4">
                         <ProductForm
                           product={product}
+                          products={products}
+                          comboItems={comboItems[product.id]}
                           disabled={isPending}
                           onSubmit={(formData) =>
                             run(
@@ -162,14 +173,33 @@ export function CatalogManager({ products }: { products: Product[] }) {
                       <>
                         <td className="px-4 py-3">
                           {product.name}
-                          {product.description ? (
-                            <span className="block max-w-xs truncate text-xs text-[var(--color-muted)]">
-                              {product.description}
+                          {product.is_combo ? (
+                            <span className="ml-2 rounded bg-[var(--color-accent)]/15 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-[var(--color-accent)] uppercase">
+                              combo
                             </span>
                           ) : null}
                           {!product.active ? (
                             <span className="ml-2 rounded bg-[var(--color-surface-2)] px-1.5 py-0.5 text-[10px] tracking-wide uppercase">
                               fuera de venta
+                            </span>
+                          ) : null}
+                          {product.is_combo && comboItems[product.id] ? (
+                            <span className="block max-w-xs truncate text-xs text-[var(--color-muted)]">
+                              {comboItems[product.id]
+                                .map((item) => {
+                                  const nombre = products.find(
+                                    (p) => p.id === item.product_id,
+                                  )?.name;
+                                  return nombre
+                                    ? `${item.quantity}× ${nombre}`
+                                    : null;
+                                })
+                                .filter(Boolean)
+                                .join(" + ")}
+                            </span>
+                          ) : product.description ? (
+                            <span className="block max-w-xs truncate text-xs text-[var(--color-muted)]">
+                              {product.description}
                             </span>
                           ) : null}
                         </td>
@@ -286,17 +316,62 @@ export function CatalogManager({ products }: { products: Product[] }) {
 
 function ProductForm({
   product,
+  products,
+  comboItems,
   disabled,
   onSubmit,
   onCancel,
   submitLabel,
 }: {
   product?: Product;
+  /** Todo el catálogo, para elegir de qué productos se arma el combo. */
+  products: Product[];
+  /** Componentes actuales, si este producto ya es un combo. */
+  comboItems?: ComboComponent[];
   disabled: boolean;
   onSubmit: (formData: FormData) => void;
   onCancel: () => void;
   submitLabel: string;
 }) {
+  const [isCombo, setIsCombo] = useState(product?.is_combo ?? false);
+  const [items, setItems] = useState<ComboComponent[]>(comboItems ?? []);
+  const [pickerId, setPickerId] = useState("");
+
+  // No se puede meter un combo dentro de otro combo, ni el producto adentro
+  // de sí mismo.
+  const disponibles = products.filter(
+    (p) =>
+      p.active &&
+      !p.is_combo &&
+      p.id !== product?.id &&
+      !items.some((i) => i.product_id === p.id),
+  );
+
+  function agregarComponente() {
+    if (!pickerId) return;
+    setItems((prev) => [...prev, { product_id: pickerId, quantity: 1 }]);
+    setPickerId("");
+  }
+
+  function quitarComponente(productId: string) {
+    setItems((prev) => prev.filter((i) => i.product_id !== productId));
+  }
+
+  function cambiarCantidad(productId: string, quantity: number) {
+    setItems((prev) =>
+      prev.map((i) =>
+        i.product_id === productId
+          ? { ...i, quantity: Math.max(1, Math.round(quantity) || 1) }
+          : i,
+      ),
+    );
+  }
+
+  const sugerido = items.reduce((sum, item) => {
+    const precio = products.find((p) => p.id === item.product_id)?.price ?? 0;
+    return sum + precio * item.quantity;
+  }, 0);
+
   return (
     <form
       action={onSubmit}
@@ -389,6 +464,94 @@ function ProductForm({
         />
         <span className="text-sm">Mostrar en la carta</span>
       </label>
+
+      <label className="flex items-center gap-2 pb-2">
+        <input
+          type="checkbox"
+          name="is_combo"
+          checked={isCombo}
+          onChange={(e) => setIsCombo(e.target.checked)}
+          className="size-4 accent-[var(--color-accent)]"
+        />
+        <span className="text-sm">Es un combo o promoción</span>
+      </label>
+
+      {isCombo ? (
+        <div className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3">
+          <input type="hidden" name="combo_items" value={JSON.stringify(items)} />
+
+          <p className="mb-2 text-xs text-[var(--color-muted)]">
+            Qué productos incluye. El precio de venta de arriba es el que paga
+            el cliente por todo junto, no se calcula solo.
+          </p>
+
+          {items.length > 0 ? (
+            <ul className="mb-2 grid gap-1.5">
+              {items.map((item) => {
+                const producto = products.find(
+                  (p) => p.id === item.product_id,
+                );
+                return (
+                  <li
+                    key={item.product_id}
+                    className="flex items-center gap-2 rounded-lg bg-[var(--color-surface)] px-2 py-1.5"
+                  >
+                    <span className="flex-1 truncate text-sm">
+                      {producto?.name ?? "Producto"}
+                    </span>
+                    <input
+                      type="number"
+                      min="1"
+                      value={item.quantity}
+                      onChange={(e) =>
+                        cambiarCantidad(item.product_id, Number(e.target.value))
+                      }
+                      className="w-14 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2 py-1 text-sm tabular-nums outline-none focus:border-[var(--color-accent)]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => quitarComponente(item.product_id)}
+                      aria-label={`Quitar ${producto?.name ?? "producto"} del combo`}
+                      className="rounded-lg px-1.5 py-1 text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-danger)]"
+                    >
+                      ✕
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
+
+          <div className="flex items-center gap-2">
+            <select
+              value={pickerId}
+              onChange={(e) => setPickerId(e.target.value)}
+              className="flex-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+            >
+              <option value="">Elegí un producto…</option>
+              {disponibles.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={agregarComponente}
+              disabled={!pickerId}
+              className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted)] transition-colors hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] disabled:opacity-50"
+            >
+              + Agregar
+            </button>
+          </div>
+
+          {items.length > 0 ? (
+            <p className="mt-2 text-xs text-[var(--color-muted)]">
+              Suma de esos productos por separado: {formatMoney(sugerido)}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="flex gap-2">
         <button

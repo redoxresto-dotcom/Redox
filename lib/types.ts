@@ -38,8 +38,16 @@ export type Product = {
   description: string | null;
   /** Si se muestra en la carta pública del QR y del sitio. */
   in_menu: boolean;
+  /** Combo o promoción: un producto que agrupa a otros con un precio propio. */
+  is_combo: boolean;
   active: boolean;
   created_at: string;
+};
+
+/** Un producto dentro de un combo, con cuánto de él lleva. */
+export type ComboComponent = {
+  product_id: string;
+  quantity: number;
 };
 
 /**

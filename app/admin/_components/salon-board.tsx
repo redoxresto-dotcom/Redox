@@ -537,6 +537,12 @@ function GridTableCard({
             </span>
           ) : null}
         </>
+      ) : waiterName ? (
+        // Tomada pero sin pedido todavía: sin esto, el encargado la ve
+        // "libre" hasta que el mozo carga el primer producto.
+        <span className="text-sm font-medium text-[var(--color-accent)]">
+          Tomada · {waiterName}
+        </span>
       ) : (
         <span className="text-sm text-[var(--color-muted)]">
           Libre · {table.seats} 🪑
@@ -589,6 +595,12 @@ function FloorTableCard({
       {ocupada && order ? (
         <span className="mt-0.5 text-xs font-medium tabular-nums">
           {formatMoney(order.total)}
+        </span>
+      ) : waiterName ? (
+        // Sin este texto fijo, solo se sabía quién la tomó pasando el mouse
+        // por el tooltip — inútil en una pantalla táctil.
+        <span className="mt-0.5 max-w-full truncate text-[10px] font-semibold">
+          {waiterName}
         </span>
       ) : (
         <span className="mt-0.5 text-[10px] opacity-70">{table.seats} 🪑</span>

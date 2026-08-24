@@ -30,7 +30,7 @@ export default async function TablePage({
   const supabase = await getSupabaseServerClient();
 
   const [tableRes, alertsRes, menuRes] = await Promise.all([
-    supabase.from("tables").select("id, number").eq("id", id).maybeSingle(),
+    supabase.from("tables").select("id, number, name").eq("id", id).maybeSingle(),
     supabase
       .from("alerts")
       .select("type")
@@ -45,13 +45,17 @@ export default async function TablePage({
       .order("name"),
   ]);
 
-  const table = tableRes.data as Pick<BarTable, "id" | "number"> | null;
+  const table = tableRes.data as Pick<
+    BarTable,
+    "id" | "number" | "name"
+  > | null;
   if (!table) notFound();
 
   return (
     <TableClient
       tableId={table.id}
       tableNumber={table.number}
+      tableName={table.name}
       initialPending={((alertsRes.data ?? []) as Pick<Alert, "type">[]).map(
         (a) => a.type
       )}

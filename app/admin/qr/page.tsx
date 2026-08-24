@@ -74,6 +74,11 @@ export default async function QrPage() {
             <span className="text-3xl font-bold tabular-nums text-black">
               Mesa {table.number}
             </span>
+            {table.name ? (
+              <span className="-mt-1 text-sm text-neutral-500">
+                {table.name}
+              </span>
+            ) : null}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={png}

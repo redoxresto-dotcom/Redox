@@ -15,6 +15,7 @@ import {
 type Props = {
   tableId: string;
   tableNumber: number;
+  tableName: string | null;
   /** Llamados ya pendientes al abrir la página. */
   initialPending: AlertType[];
   /** La carta, ya filtrada por la vista pública. */
@@ -47,6 +48,7 @@ const BUTTONS: {
 export function TableClient({
   tableId,
   tableNumber,
+  tableName,
   initialPending,
   menu,
 }: Props) {
@@ -141,6 +143,11 @@ export function TableClient({
               {tableNumber}
             </span>
           </div>
+          {tableName ? (
+            <p className="mt-1 text-sm text-[var(--color-muted)]">
+              {tableName}
+            </p>
+          ) : null}
         </header>
 
         {error ? (

@@ -49,6 +49,16 @@ export type DayRow = {
   transferencia: number;
   otro: number;
 };
+export type CancelledSummaryRow = { pedidos: number; total: number };
+export type CancelledRow = {
+  order_id: string;
+  table_number: number;
+  table_name: string | null;
+  total: number;
+  cancelled_at: string;
+  cancelled_by: string | null;
+  reason: string | null;
+};
 
 function isDate(value: unknown): value is string {
   return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
@@ -125,6 +135,21 @@ export const getByDay = (s: Supabase, r: Range) =>
 /** Minutos entre que un plato queda pronto y que llega a la mesa. */
 export const getDeliveryTimes = (s: Supabase, r: Range) =>
   rpc<DeliveryRow>(s, "report_delivery_times", r);
+
+export async function getCancelledSummary(
+  supabase: Supabase,
+  range: Range,
+): Promise<CancelledSummaryRow> {
+  const rows = await rpc<CancelledSummaryRow>(
+    supabase,
+    "report_cancelled_summary",
+    range,
+  );
+  return rows[0] ?? { pedidos: 0, total: 0 };
+}
+
+export const getCancelled = (s: Supabase, r: Range) =>
+  rpc<CancelledRow>(s, "report_cancelled", r);
 
 export const WEEKDAY_LABELS: Record<number, string> = {
   1: "Lunes",

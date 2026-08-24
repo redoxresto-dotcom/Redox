@@ -1,6 +1,8 @@
 import { requireAdmin } from "@/lib/auth";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import {
+  getCancelled,
+  getCancelledSummary,
   getDeliveryTimes,
   getByHour,
   getByPayment,
@@ -34,16 +36,27 @@ export default async function ReportesPage({
   const range = parseRange(params);
   const supabase = await getSupabaseServerClient();
 
-  const [resumen, medios, productos, horas, dias, entregas, catalogoRes] =
-    await Promise.all([
-      getSummary(supabase, range),
-      getByPayment(supabase, range),
-      getByProduct(supabase, range),
-      getByHour(supabase, range),
-      getByWeekday(supabase, range),
-      getDeliveryTimes(supabase, range),
-      supabase.from("products").select("id, name").eq("active", true),
-    ]);
+  const [
+    resumen,
+    medios,
+    productos,
+    horas,
+    dias,
+    entregas,
+    catalogoRes,
+    canceladosResumen,
+    cancelados,
+  ] = await Promise.all([
+    getSummary(supabase, range),
+    getByPayment(supabase, range),
+    getByProduct(supabase, range),
+    getByHour(supabase, range),
+    getByWeekday(supabase, range),
+    getDeliveryTimes(supabase, range),
+    supabase.from("products").select("id, name").eq("active", true),
+    getCancelledSummary(supabase, range),
+    getCancelled(supabase, range),
+  ]);
 
   const vendidos = new Set(productos.map((p) => p.product_id));
   const sinVentas = ((catalogoRes.data ?? []) as Pick<Product, "id" | "name">[])
@@ -102,6 +115,10 @@ export default async function ReportesPage({
           value={formatMoney(Number(resumen.ticket_avg))}
         />
         <Metric label="Unidades" value={String(resumen.items_units)} />
+        <Metric
+          label="Cancelados"
+          value={`${canceladosResumen.pedidos} · ${formatMoney(Number(canceladosResumen.total))}`}
+        />
       </section>
 
       <section className="mt-4 grid gap-4 lg:grid-cols-2">
@@ -273,6 +290,49 @@ export default async function ReportesPage({
                 </div>
               ) : null}
             </>
+          )}
+        </Card>
+      </section>
+
+      <section className="mt-4">
+        <Card title="Pedidos cancelados" wide>
+          {cancelados.length === 0 ? (
+            <p className="py-6 text-center text-sm text-[var(--color-muted)]">
+              No hubo pedidos cancelados en el período.
+            </p>
+          ) : (
+            <ul className="grid gap-2">
+              {cancelados.map((c) => (
+                <li
+                  key={c.order_id}
+                  className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-[var(--color-border)] pb-2 text-sm last:border-0 last:pb-0"
+                >
+                  <span className="min-w-0">
+                    <span className="font-medium">
+                      Mesa {c.table_number}
+                      {c.table_name ? ` · ${c.table_name}` : ""}
+                    </span>
+                    <span className="ml-2 text-xs text-[var(--color-muted)]">
+                      {new Date(c.cancelled_at).toLocaleString("es-UY", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                      {c.cancelled_by ? ` · ${c.cancelled_by}` : ""}
+                    </span>
+                    {c.reason ? (
+                      <span className="block text-xs text-[var(--color-muted)]">
+                        {c.reason}
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="shrink-0 font-medium tabular-nums text-[var(--color-danger)]">
+                    {formatMoney(Number(c.total))}
+                  </span>
+                </li>
+              ))}
+            </ul>
           )}
         </Card>
       </section>

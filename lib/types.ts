@@ -2,7 +2,7 @@ export type ProductCategory = "bebida" | "comida" | "otro";
 export type StaffRole = "mozo" | "barra" | "cocina" | "admin" | "gerente";
 export type TableStatus = "libre" | "ocupada";
 export type TableShape = "redonda" | "cuadrada" | "rectangular";
-export type OrderStatus = "abierta" | "cobrada";
+export type OrderStatus = "abierta" | "cobrada" | "cancelada";
 export type AlertType = "llamar_mozo" | "pedir_cuenta";
 /** Quién prepara el producto. 'ninguna' = se cobra sin pasar por nadie. */
 export type Station = "barra" | "cocina" | "ninguna";
@@ -118,6 +118,8 @@ export type Order = {
   closed_at: string | null;
   opened_by: string | null;
   closed_by: string | null;
+  /** Motivo de la cancelación, si status es 'cancelada'. */
+  cancel_reason: string | null;
   created_at: string;
 };
 

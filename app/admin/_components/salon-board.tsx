@@ -8,6 +8,7 @@ import { FloorTable } from "./floor-table";
 import { CANVAS_H, CANVAS_W, fitScale } from "@/lib/floor";
 import {
   addProductToTable,
+  cancelOrder,
   deliverItem,
   deliverTable,
   changeItemQuantity,
@@ -659,6 +660,8 @@ function TablePanel({
   const [category, setCategory] = useState<ProductCategory | "todos">("todos");
   const [search, setSearch] = useState("");
   const [confirmingClose, setConfirmingClose] = useState(false);
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
   const [transfiriendo, setTransfiriendo] = useState(false);
   const router = useRouter();
 
@@ -695,6 +698,15 @@ function TablePanel({
     if (!order) return;
     run(async () => {
       const result = await closeOrder(order.id, method);
+      if (!result.error) onClose();
+      return result;
+    });
+  }
+
+  function cancelar() {
+    if (!order) return;
+    run(async () => {
+      const result = await cancelOrder(order.id, cancelReason);
       if (!result.error) onClose();
       return result;
     });
@@ -1041,6 +1053,42 @@ function TablePanel({
                 Abrir mesa
               </button>
             )
+          ) : confirmingCancel ? (
+            <div className="grid gap-2">
+              <p className="text-center text-sm text-[var(--color-muted)]">
+                {isPending
+                  ? "Cancelando…"
+                  : "Se cancela sin cobrar. Los consumos quedan igual en el histórico."}
+              </p>
+              <textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                disabled={isPending}
+                placeholder="Motivo (opcional)"
+                maxLength={200}
+                rows={2}
+                className="w-full resize-none rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-danger)] disabled:opacity-50"
+              />
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={cancelar}
+                className="w-full rounded-xl bg-[var(--color-danger)] px-4 py-3.5 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                Confirmar cancelación
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmingCancel(false);
+                  setCancelReason("");
+                }}
+                disabled={isPending}
+                className="rounded-xl px-4 py-2.5 text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)] disabled:opacity-50"
+              >
+                Volver
+              </button>
+            </div>
           ) : confirmingClose ? (
             <div className="grid gap-2">
               <p className="text-center text-sm text-[var(--color-muted)]">
@@ -1072,27 +1120,42 @@ function TablePanel({
                 Cancelar
               </button>
             </div>
-          ) : hasOpenShift ? (
-            <button
-              type="button"
-              disabled={isPending}
-              onClick={() => setConfirmingClose(true)}
-              className="w-full rounded-xl bg-[var(--color-accent)] px-4 py-3.5 font-semibold text-[#04121c] disabled:opacity-50"
-            >
-              Cobrar y cerrar mesa
-            </button>
           ) : (
             <div className="grid gap-2">
-              <button
-                type="button"
-                disabled
-                className="w-full cursor-not-allowed rounded-xl bg-[var(--color-surface-2)] px-4 py-3.5 font-semibold text-[var(--color-muted)]"
-              >
-                Cobrar y cerrar mesa
-              </button>
-              <p className="text-center text-xs text-[var(--color-busy)]">
-                Hay que abrir la caja antes de cobrar.
-              </p>
+              {hasOpenShift ? (
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => setConfirmingClose(true)}
+                  className="w-full rounded-xl bg-[var(--color-accent)] px-4 py-3.5 font-semibold text-[#04121c] disabled:opacity-50"
+                >
+                  Cobrar y cerrar mesa
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    disabled
+                    className="w-full cursor-not-allowed rounded-xl bg-[var(--color-surface-2)] px-4 py-3.5 font-semibold text-[var(--color-muted)]"
+                  >
+                    Cobrar y cerrar mesa
+                  </button>
+                  <p className="text-center text-xs text-[var(--color-busy)]">
+                    Hay que abrir la caja antes de cobrar.
+                  </p>
+                </>
+              )}
+
+              {isManager ? (
+                <button
+                  type="button"
+                  disabled={isPending}
+                  onClick={() => setConfirmingCancel(true)}
+                  className="w-full rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-sm text-[var(--color-muted)] transition-colors hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:opacity-50"
+                >
+                  Cancelar pedido
+                </button>
+              ) : null}
             </div>
           )}
         </footer>

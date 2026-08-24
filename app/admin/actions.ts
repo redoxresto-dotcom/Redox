@@ -209,6 +209,43 @@ export async function closeOrder(
 }
 
 /**
+ * Cancela el pedido: hubo consumo cargado, pero no se cobra.
+ *
+ * Es el caso del medio entre cobrar y soltar una mesa vacía: el cliente pidió
+ * y por lo que sea —se fue, se arrepintió, no llegó a consumir en el local—
+ * no corresponde cobrarle. A diferencia de `releaseTable`, acá puede haber
+ * productos ya cargados (incluso en camino a la cocina): no se borran, la
+ * cuenta queda marcada como cancelada para el reporte de pedidos cancelados.
+ *
+ * Es del encargado, igual que soltar una mesa: quien puede cancelar también
+ * podría maquillar una venta que no quiere declarar.
+ */
+export async function cancelOrder(
+  orderId: string,
+  reason?: string,
+): Promise<ActionResult> {
+  await requireAdmin();
+  const supabase = await getSupabaseServerClient();
+
+  const { error } = await supabase.rpc("cancel_table_order", {
+    p_order_id: orderId,
+    p_reason: reason?.trim() || null,
+  });
+
+  if (error) {
+    if (error.message.includes("encargado")) {
+      return { error: "Cancelar un pedido es del encargado." };
+    }
+    return { error: "No se pudo cancelar el pedido: " + error.message };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/mis-mesas");
+  revalidatePath("/estacion", "layout");
+  return OK;
+}
+
+/**
  * Suelta una mesa sin cobrar: la abrieron por error.
  *
  * Es del encargado. Un mozo que se equivoca de mesa avisa; si pudiera soltarla

@@ -71,14 +71,9 @@ export default async function QrPage() {
             key={table.id}
             className="flex break-inside-avoid flex-col items-center gap-2 rounded-2xl border border-[var(--color-border)] bg-white p-4 text-center print:border-black"
           >
-            <span className="text-3xl font-bold tabular-nums text-black">
-              Mesa {table.number}
+            <span className="text-3xl font-bold text-black">
+              {table.name ? table.name : `Mesa ${table.number}`}
             </span>
-            {table.name ? (
-              <span className="-mt-1 text-sm text-neutral-500">
-                {table.name}
-              </span>
-            ) : null}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={png}

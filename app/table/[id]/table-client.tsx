@@ -135,19 +135,25 @@ export function TableClient({
             Redox
           </p>
 
-          <div className="mt-5 flex items-baseline gap-3">
-            <span className="text-sm tracking-[0.2em] text-[var(--color-muted)] uppercase">
-              Mesa
-            </span>
-            <span className="text-6xl leading-none font-bold tabular-nums">
-              {tableNumber}
-            </span>
-          </div>
           {tableName ? (
-            <p className="mt-1 text-sm text-[var(--color-muted)]">
-              {tableName}
-            </p>
-          ) : null}
+            <div className="mt-5 flex flex-col items-center gap-1">
+              <span className="text-sm tracking-[0.2em] text-[var(--color-muted)] uppercase">
+                Mesa
+              </span>
+              <span className="text-4xl leading-none font-bold">
+                {tableName}
+              </span>
+            </div>
+          ) : (
+            <div className="mt-5 flex items-baseline gap-3">
+              <span className="text-sm tracking-[0.2em] text-[var(--color-muted)] uppercase">
+                Mesa
+              </span>
+              <span className="text-6xl leading-none font-bold tabular-nums">
+                {tableNumber}
+              </span>
+            </div>
+          )}
         </header>
 
         {error ? (

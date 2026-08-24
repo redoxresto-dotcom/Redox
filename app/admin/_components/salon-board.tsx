@@ -512,8 +512,15 @@ function GridTableCard({
       ) : null}
 
       <div className="flex w-full items-center justify-between">
-        <span className="text-2xl font-semibold tabular-nums">
-          {table.number}
+        <span className="flex items-baseline gap-1.5">
+          <span className="text-2xl font-semibold tabular-nums">
+            {table.number}
+          </span>
+          {table.name ? (
+            <span className="truncate text-xs text-[var(--color-muted)]">
+              {table.name}
+            </span>
+          ) : null}
         </span>
         <span className={`size-2.5 rounded-full ${PUNTO[estado]}`} />
       </div>
@@ -591,6 +598,11 @@ function FloorTableCard({
       <span className="text-xl leading-none font-bold tabular-nums">
         {table.number}
       </span>
+      {table.name ? (
+        <span className="max-w-full truncate text-[10px] opacity-80">
+          {table.name}
+        </span>
+      ) : null}
 
       {ocupada && order ? (
         <span className="mt-0.5 text-xs font-medium tabular-nums">
@@ -705,7 +717,14 @@ function TablePanel({
         {/* Encabezado */}
         <header className="flex items-center gap-3 border-b border-[var(--color-border)] px-5 py-4">
           <div>
-            <h2 className="text-xl font-semibold">Mesa {table.number}</h2>
+            <h2 className="text-xl font-semibold">
+              Mesa {table.number}
+              {table.name ? (
+                <span className="ml-1.5 text-sm font-normal text-[var(--color-muted)]">
+                  {table.name}
+                </span>
+              ) : null}
+            </h2>
             <p className="text-xs text-[var(--color-muted)]">
               {table.status === "ocupada" ? "Ocupada" : "Libre"}
               {waiterName ? ` · atiende ${waiterName}` : ""}

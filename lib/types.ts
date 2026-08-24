@@ -74,6 +74,8 @@ export type BarTable = {
   id: string;
   number: number;
   status: TableStatus;
+  /** Etiqueta opcional además del número, p. ej. "Terraza" o "Barra 1". */
+  name: string | null;
   /** id del perfil del mozo a cargo, o null si la mesa está libre. */
   assigned_waiter: string | null;
   /** Lugar en el plano del salón. */

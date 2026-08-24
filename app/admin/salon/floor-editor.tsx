@@ -198,6 +198,7 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
         height: t.height,
         rotation: t.rotation,
         seats: t.seats,
+        name: t.name,
       }));
 
     run(
@@ -399,6 +400,11 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
                     <span className="text-lg font-bold tabular-nums">
                       {t.number}
                     </span>
+                    {t.name ? (
+                      <span className="max-w-full truncate text-[10px] font-semibold">
+                        {t.name}
+                      </span>
+                    ) : null}
                     <span className="text-xs text-[var(--color-muted)]">
                       {t.seats} 🪑
                     </span>
@@ -473,6 +479,23 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
                   ✕
                 </button>
               </div>
+
+              <label className="grid gap-1">
+                <span className="text-xs text-[var(--color-muted)]">
+                  Nombre (opcional)
+                </span>
+                <input
+                  key={selected.id}
+                  type="text"
+                  maxLength={40}
+                  defaultValue={selected.name ?? ""}
+                  placeholder={`Mesa ${selected.number}`}
+                  onBlur={(e) =>
+                    patch(selected.id, { name: e.target.value.trim() || null })
+                  }
+                  className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+                />
+              </label>
 
               <label className="grid gap-1">
                 <span className="text-xs text-[var(--color-muted)]">Forma</span>

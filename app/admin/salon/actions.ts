@@ -20,6 +20,7 @@ export type LayoutInput = {
   height: number;
   rotation: number;
   seats: number;
+  name: string | null;
 };
 
 /**

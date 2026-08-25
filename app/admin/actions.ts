@@ -217,14 +217,16 @@ export async function closeOrder(
  * productos ya cargados (incluso en camino a la cocina): no se borran, la
  * cuenta queda marcada como cancelada para el reporte de pedidos cancelados.
  *
- * Es del encargado, igual que soltar una mesa: quien puede cancelar también
- * podría maquillar una venta que no quiere declarar.
+ * Lo puede hacer cualquiera del personal, no solo el encargado: es el mozo
+ * quien está con el cliente cuando se arrepiente o se va, y no siempre hay un
+ * encargado a mano para pedírselo. Queda registrado quién canceló y el motivo,
+ * así que el reporte de cancelados sigue siendo trazable.
  */
 export async function cancelOrder(
   orderId: string,
   reason?: string,
 ): Promise<ActionResult> {
-  await requireAdmin();
+  await requireStaff();
   const supabase = await getSupabaseServerClient();
 
   const { error } = await supabase.rpc("cancel_table_order", {
@@ -233,9 +235,6 @@ export async function cancelOrder(
   });
 
   if (error) {
-    if (error.message.includes("encargado")) {
-      return { error: "Cancelar un pedido es del encargado." };
-    }
     return { error: "No se pudo cancelar el pedido: " + error.message };
   }
 

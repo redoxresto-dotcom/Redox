@@ -1146,16 +1146,14 @@ function TablePanel({
                 </>
               )}
 
-              {isManager ? (
-                <button
-                  type="button"
-                  disabled={isPending}
-                  onClick={() => setConfirmingCancel(true)}
-                  className="w-full rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-sm text-[var(--color-muted)] transition-colors hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:opacity-50"
-                >
-                  Cancelar pedido
-                </button>
-              ) : null}
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={() => setConfirmingCancel(true)}
+                className="w-full rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-sm text-[var(--color-muted)] transition-colors hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:opacity-50"
+              >
+                Cancelar pedido
+              </button>
             </div>
           )}
         </footer>

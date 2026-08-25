@@ -388,12 +388,12 @@ function ProductForm({
         />
       </label>
 
-      <label className="grid gap-1">
+      <label className="grid min-w-0 gap-1">
         <span className="text-xs text-[var(--color-muted)]">Categoría</span>
         <select
           name="category"
           defaultValue={product?.category ?? "bebida"}
-          className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+          className="w-full min-w-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
         >
           {CATEGORIES.map((c) => (
             <option key={c} value={c}>
@@ -403,12 +403,12 @@ function ProductForm({
         </select>
       </label>
 
-      <label className="grid gap-1">
+      <label className="grid min-w-0 gap-1">
         <span className="text-xs text-[var(--color-muted)]">Estación</span>
         <select
           name="station"
           defaultValue={product?.station ?? "barra"}
-          className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+          className="w-full min-w-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
         >
           {STATIONS.map((st) => (
             <option key={st} value={st}>
@@ -418,7 +418,7 @@ function ProductForm({
         </select>
       </label>
 
-      <label className="grid w-28 gap-1">
+      <label className="grid w-28 min-w-0 max-w-full gap-1">
         <span className="text-xs text-[var(--color-muted)]">Precio venta</span>
         <input
           name="price"
@@ -427,11 +427,11 @@ function ProductForm({
           step="0.01"
           defaultValue={product?.price ?? ""}
           required
-          className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm tabular-nums outline-none focus:border-[var(--color-accent)]"
+          className="w-full min-w-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm tabular-nums outline-none focus:border-[var(--color-accent)]"
         />
       </label>
 
-      <label className="grid w-28 gap-1">
+      <label className="grid w-28 min-w-0 max-w-full gap-1">
         <span className="text-xs text-[var(--color-muted)]">Costo</span>
         <input
           name="cost"
@@ -439,7 +439,7 @@ function ProductForm({
           min="0"
           step="0.01"
           defaultValue={product?.cost ?? 0}
-          className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm tabular-nums outline-none focus:border-[var(--color-accent)]"
+          className="w-full min-w-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm tabular-nums outline-none focus:border-[var(--color-accent)]"
         />
       </label>
 

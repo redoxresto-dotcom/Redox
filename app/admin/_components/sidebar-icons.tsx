@@ -139,6 +139,26 @@ export function IconLogout({ size = 20, className }: IconProps) {
   );
 }
 
+/** Abre el menú en el celular: el rail colapsado no entra en esa pantalla. */
+export function IconMenu({ size = 20, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" className={className} {...base}>
+      <path d="M3 6h18" />
+      <path d="M3 12h18" />
+      <path d="M3 18h18" />
+    </svg>
+  );
+}
+
+export function IconClose({ size = 20, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" className={className} {...base}>
+      <path d="M6 6l12 12" />
+      <path d="M18 6l-12 12" />
+    </svg>
+  );
+}
+
 export function IconChevronsLeft({ size = 20, className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" className={className} {...base}>

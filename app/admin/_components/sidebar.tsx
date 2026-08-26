@@ -19,6 +19,8 @@ import {
   IconUsuarios,
   IconQR,
   IconLogout,
+  IconMenu,
+  IconClose,
   IconChevronsLeft,
   IconChevronsRight,
 } from "./sidebar-icons";
@@ -76,7 +78,13 @@ export function Sidebar({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  // Colapsar a solo íconos: elección del escritorio, se recuerda entre
+  // sesiones. En el celular no significa nada — ahí el menú entero se guarda
+  // (ver `mobileOpen`), no tiene un estado intermedio.
   const [collapsed, setCollapsed] = useState(false);
+  // El menú del celular arranca cerrado siempre: no tiene sentido persistirlo
+  // como el de escritorio, porque taparía toda la pantalla en cada visita.
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   // Se lee después del primer render a propósito: el servidor no conoce el
   // localStorage y pintar distinto de lo que ya está en pantalla rompe la
@@ -85,7 +93,13 @@ export function Sidebar({
     if (window.localStorage.getItem(SIDEBAR_KEY) === "1") setCollapsed(true);
   }, []);
 
-  function toggle() {
+  // Cambiar de página con el menú del celular abierto lo deja abierto tapando
+  // la pantalla nueva si no se cierra solo.
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  function toggleCollapsed() {
     setCollapsed((c) => {
       const next = !c;
       window.localStorage.setItem(SIDEBAR_KEY, next ? "1" : "0");
@@ -97,10 +111,19 @@ export function Sidebar({
 
   return (
     <div className="flex min-h-screen">
+      {/* Fondo oscuro detrás del menú del celular: tocarlo lo cierra. */}
+      {mobileOpen ? (
+        <div
+          role="presentation"
+          onClick={() => setMobileOpen(false)}
+          className="fixed inset-0 z-30 bg-black/60 backdrop-blur-[1px] md:hidden"
+        />
+      ) : null}
+
       <aside
-        className={`sticky top-0 z-30 flex h-screen shrink-0 flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)]/60 backdrop-blur transition-[width] duration-200 ${
-          collapsed ? "w-[76px]" : "w-64"
-        }`}
+        className={`fixed top-0 left-0 z-40 flex h-screen w-72 flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)] backdrop-blur transition-transform duration-200 md:sticky md:z-30 md:translate-x-0 md:bg-[var(--color-surface)]/60 md:transition-[width] ${
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        } ${collapsed ? "md:w-[76px]" : "md:w-64"}`}
       >
         <div className="flex items-center gap-2 border-b border-[var(--color-border)] px-4 py-4">
           <Link
@@ -109,26 +132,38 @@ export function Sidebar({
             className="flex min-w-0 items-center gap-2"
           >
             <RedoxFlask size={26} />
-            {!collapsed ? (
-              <span
-                className="truncate text-lg font-semibold tracking-tight text-[var(--color-brand-soft)] italic"
-                style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
-              >
-                Redox
-              </span>
-            ) : null}
+            <span
+              className={`truncate text-lg font-semibold tracking-tight text-[var(--color-brand-soft)] italic ${
+                collapsed ? "md:hidden" : ""
+              }`}
+              style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
+            >
+              Redox
+            </span>
           </Link>
+
+          {/* Colapsar a rail de íconos: solo tiene sentido con lugar de sobra. */}
           <button
             type="button"
-            onClick={toggle}
+            onClick={toggleCollapsed}
             aria-label={collapsed ? "Expandir menú" : "Colapsar menú"}
-            className="ml-auto shrink-0 rounded-lg p-1.5 text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface-2)] hover:text-[var(--color-ink)]"
+            className="ml-auto hidden shrink-0 rounded-lg p-1.5 text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface-2)] hover:text-[var(--color-ink)] md:block"
           >
             {collapsed ? (
               <IconChevronsRight size={16} />
             ) : (
               <IconChevronsLeft size={16} />
             )}
+          </button>
+
+          {/* En el celular el menú es todo o nada: se cierra, no se colapsa. */}
+          <button
+            type="button"
+            onClick={() => setMobileOpen(false)}
+            aria-label="Cerrar menú"
+            className="ml-auto shrink-0 rounded-lg p-1.5 text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface-2)] hover:text-[var(--color-ink)] md:hidden"
+          >
+            <IconClose size={18} />
           </button>
         </div>
 
@@ -142,7 +177,7 @@ export function Sidebar({
                     href={item.href}
                     title={collapsed ? item.label : undefined}
                     className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors ${
-                      collapsed ? "justify-center" : ""
+                      collapsed ? "md:justify-center" : ""
                     } ${
                       active
                         ? "bg-[var(--color-accent)]/15 text-[var(--color-accent)]"
@@ -150,9 +185,9 @@ export function Sidebar({
                     }`}
                   >
                     <item.icon size={20} className="shrink-0" />
-                    {!collapsed ? (
-                      <span className="truncate">{item.label}</span>
-                    ) : null}
+                    <span className={`truncate ${collapsed ? "md:hidden" : ""}`}>
+                      {item.label}
+                    </span>
                   </Link>
                 </li>
               );
@@ -163,22 +198,20 @@ export function Sidebar({
         <div className="border-t border-[var(--color-border)] p-3">
           <div
             className={`flex items-center gap-2.5 rounded-lg px-2 py-2 ${
-              collapsed ? "justify-center" : ""
+              collapsed ? "md:justify-center" : ""
             }`}
           >
             <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-accent)]/20 text-xs font-semibold text-[var(--color-accent)]">
               {iniciales(fullName)}
             </span>
-            {!collapsed ? (
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium">
-                  {fullName}
-                </span>
-                <span className="block truncate text-xs text-[var(--color-muted)]">
-                  {ROLE_LABELS[role]}
-                </span>
+            <span className={`min-w-0 flex-1 ${collapsed ? "md:hidden" : ""}`}>
+              <span className="block truncate text-sm font-medium">
+                {fullName}
               </span>
-            ) : null}
+              <span className="block truncate text-xs text-[var(--color-muted)]">
+                {ROLE_LABELS[role]}
+              </span>
+            </span>
           </div>
 
           <form action={signOut}>
@@ -186,17 +219,40 @@ export function Sidebar({
               type="submit"
               title={collapsed ? "Salir" : undefined}
               className={`mt-1 flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-sm text-[var(--color-muted)] transition-colors hover:bg-[var(--color-danger)]/10 hover:text-[var(--color-danger)] ${
-                collapsed ? "justify-center" : ""
+                collapsed ? "md:justify-center" : ""
               }`}
             >
               <IconLogout size={18} className="shrink-0" />
-              {!collapsed ? "Salir" : null}
+              <span className={collapsed ? "md:hidden" : ""}>Salir</span>
             </button>
           </form>
         </div>
       </aside>
 
-      <div className="min-w-0 flex-1">{children}</div>
+      <div className="min-w-0 flex-1">
+        {/* Barra del celular: el menú entero se guarda atrás de este botón. */}
+        <div className="sticky top-0 z-20 flex items-center gap-3 border-b border-[var(--color-border)] bg-[var(--color-bg)]/95 px-4 py-3 backdrop-blur md:hidden">
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            aria-label="Abrir menú"
+            className="rounded-lg p-1.5 text-[var(--color-muted)] transition-colors hover:bg-[var(--color-surface)] hover:text-[var(--color-ink)]"
+          >
+            <IconMenu size={22} />
+          </button>
+          <Link href="/admin" aria-label="Redox" className="flex items-center gap-2">
+            <RedoxFlask size={22} />
+            <span
+              className="text-base font-semibold tracking-tight text-[var(--color-brand-soft)] italic"
+              style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
+            >
+              Redox
+            </span>
+          </Link>
+        </div>
+
+        {children}
+      </div>
     </div>
   );
 }

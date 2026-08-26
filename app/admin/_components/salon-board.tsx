@@ -411,8 +411,14 @@ export function SalonBoard({
             ref={wrapRef}
             // El escalado es una transformación y no encoge la caja: sin fijarle
             // la altura, el plano deja un hueco enorme debajo.
+            //
+            // overflow-x-auto, no overflow-hidden: por debajo de MIN_SCALE el
+            // plano ya no achica más (ver fitScale) y queda más ancho que la
+            // pantalla. Con overflow-hidden esa parte se recorta sin avisar —el
+            // celular ve tres mesas y listo—; con scroll lateral, como en el
+            // editor del plano, sigue estando, solo hay que desplazarse.
             style={{ height: CANVAS_H * scale }}
-            className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]"
+            className="overflow-x-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]"
           >
             {/* La escala es una transformación: no cambia el tamaño que el div
               ocupa en el layout. Sin esta caja intermedia con la medida ya

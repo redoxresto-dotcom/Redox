@@ -1066,15 +1066,20 @@ function TablePanel({
                   ? "Cancelando…"
                   : "Se cancela sin cobrar. Los consumos quedan igual en el histórico."}
               </p>
-              <textarea
+              <select
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
                 disabled={isPending}
-                placeholder="Motivo (opcional)"
-                maxLength={200}
-                rows={2}
-                className="w-full resize-none rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-danger)] disabled:opacity-50"
-              />
+                className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-danger)] disabled:opacity-50"
+              >
+                <option value="">Motivo (opcional)</option>
+                <option value="Error al tomar el pedido">
+                  Error al tomar el pedido
+                </option>
+                <option value="Error al tomar la mesa">
+                  Error al tomar la mesa
+                </option>
+              </select>
               <button
                 type="button"
                 disabled={isPending}

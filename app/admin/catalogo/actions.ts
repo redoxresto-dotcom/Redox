@@ -105,6 +105,50 @@ function friendlyError(message: string): string {
   return message;
 }
 
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+
+/**
+ * Sube la foto del producto al bucket público y devuelve su URL.
+ *
+ * El nombre del archivo es un id random y no el del producto: así una foto
+ * nueva no pisa a la vieja mientras se sube (el registro solo apunta a la URL
+ * nueva una vez que el insert/update de `products` confirma), y no hay que
+ * lidiar con nombres repetidos entre productos con el mismo nombre.
+ */
+async function uploadProductImage(
+  supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>,
+  file: File,
+): Promise<{ url: string; path: string } | { error: string }> {
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    return { error: "La imagen debe ser JPG, PNG, WEBP o GIF." };
+  }
+  if (file.size > MAX_IMAGE_BYTES) {
+    return { error: "La imagen no puede pesar más de 5 MB." };
+  }
+
+  const ext = file.type.split("/")[1] === "jpeg" ? "jpg" : file.type.split("/")[1];
+  const path = `${crypto.randomUUID()}.${ext}`;
+
+  const { error } = await supabase.storage
+    .from("product-images")
+    .upload(path, file, { contentType: file.type });
+  if (error) return { error: "No se pudo subir la imagen: " + error.message };
+
+  const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+  return { url: data.publicUrl, path };
+}
+
+/** Borra una foto del bucket. No frena el flujo si falla: es solo prolijidad. */
+async function deleteProductImage(
+  supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>,
+  imageUrl: string,
+): Promise<void> {
+  const path = imageUrl.split("/product-images/")[1];
+  if (!path) return;
+  await supabase.storage.from("product-images").remove([decodeURIComponent(path)]);
+}
+
 /**
  * Guarda la lista de componentes de un combo. Va aparte del insert/update del
  * producto porque son dos tablas distintas; si esto falla después de crear el
@@ -141,9 +185,18 @@ export async function createProduct(formData: FormData): Promise<CatalogResult> 
   if (!parsed.ok) return { error: parsed.error };
 
   const supabase = await getSupabaseServerClient();
+
+  const image = formData.get("image");
+  let image_url: string | null = null;
+  if (image instanceof File && image.size > 0) {
+    const uploaded = await uploadProductImage(supabase, image);
+    if ("error" in uploaded) return { error: uploaded.error };
+    image_url = uploaded.url;
+  }
+
   const { data, error } = await supabase
     .from("products")
-    .insert(parsed.values)
+    .insert({ ...parsed.values, image_url })
     .select("id")
     .single();
 
@@ -174,10 +227,31 @@ export async function updateProduct(
   if (!parsed.ok) return { error: parsed.error };
 
   const supabase = await getSupabaseServerClient();
-  const { error } = await supabase
+
+  const { data: current } = await supabase
     .from("products")
-    .update(parsed.values)
-    .eq("id", id);
+    .select("image_url")
+    .eq("id", id)
+    .maybeSingle();
+  const previousImageUrl = (current as { image_url: string | null } | null)
+    ?.image_url ?? null;
+
+  const image = formData.get("image");
+  const removeImage = formData.get("remove_image") !== null;
+  let values: typeof parsed.values & { image_url?: string | null } =
+    parsed.values;
+
+  if (image instanceof File && image.size > 0) {
+    const uploaded = await uploadProductImage(supabase, image);
+    if ("error" in uploaded) return { error: uploaded.error };
+    values = { ...values, image_url: uploaded.url };
+    if (previousImageUrl) await deleteProductImage(supabase, previousImageUrl);
+  } else if (removeImage && previousImageUrl) {
+    values = { ...values, image_url: null };
+    await deleteProductImage(supabase, previousImageUrl);
+  }
+
+  const { error } = await supabase.from("products").update(values).eq("id", id);
 
   if (error) return { error: friendlyError(error.message) };
 

@@ -291,9 +291,25 @@ function Carta({
 
             <ul className="grid gap-4">
               {seccion.items.map((item) => (
-                <li key={item.id} className="flex items-baseline gap-3">
+                <li key={item.id} className="flex items-start gap-3">
+                  {item.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={item.image_url}
+                      alt=""
+                      loading="lazy"
+                      className="size-14 shrink-0 rounded-xl border border-[var(--color-border)] object-cover sm:size-16"
+                    />
+                  ) : null}
                   <div className="min-w-0 flex-1">
-                    <p className="leading-tight font-medium">{item.name}</p>
+                    <p className="leading-tight font-medium">
+                      {item.name}
+                      {item.is_combo ? (
+                        <span className="ml-2 rounded bg-[var(--color-accent)]/15 px-1.5 py-0.5 align-middle text-[10px] font-semibold tracking-wide text-[var(--color-accent)] uppercase">
+                          combo
+                        </span>
+                      ) : null}
+                    </p>
                     {item.description ? (
                       <p className="mt-0.5 text-sm leading-snug text-[var(--color-muted)]">
                         {item.description}

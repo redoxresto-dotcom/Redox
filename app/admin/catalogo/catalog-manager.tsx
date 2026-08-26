@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition, type ChangeEvent } from "react";
 import {
   createProduct,
   deleteProduct,
@@ -172,6 +172,16 @@ export function CatalogManager({
                     ) : (
                       <>
                         <td className="px-4 py-3">
+                          <div className="flex items-start gap-2">
+                            {product.image_url ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={product.image_url}
+                                alt=""
+                                className="size-9 shrink-0 rounded-lg object-cover"
+                              />
+                            ) : null}
+                            <div className="min-w-0">
                           {product.name}
                           {product.is_combo ? (
                             <span className="ml-2 rounded bg-[var(--color-accent)]/15 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-[var(--color-accent)] uppercase">
@@ -202,6 +212,8 @@ export function CatalogManager({
                               {product.description}
                             </span>
                           ) : null}
+                            </div>
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-[var(--color-muted)]">
                           {CATEGORY_LABELS[product.category]}
@@ -336,6 +348,21 @@ function ProductForm({
   const [isCombo, setIsCombo] = useState(product?.is_combo ?? false);
   const [items, setItems] = useState<ComboComponent[]>(comboItems ?? []);
   const [pickerId, setPickerId] = useState("");
+  const [imagePreview, setImagePreview] = useState<string | null>(
+    product?.image_url ?? null,
+  );
+  const [removeImage, setRemoveImage] = useState(false);
+
+  function onImageChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    setRemoveImage(false);
+    if (!file) {
+      setImagePreview(product?.image_url ?? null);
+      return;
+    }
+    // Vista previa local: no hace falta subir nada para ver cómo va a quedar.
+    setImagePreview(URL.createObjectURL(file));
+  }
 
   // No se puede meter un combo dentro de otro combo, ni el producto adentro
   // de sí mismo.
@@ -377,6 +404,48 @@ function ProductForm({
       action={onSubmit}
       className="flex flex-wrap items-end gap-3"
     >
+      <div className="flex items-center gap-3">
+        {imagePreview && !removeImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={imagePreview}
+            alt=""
+            className="size-16 shrink-0 rounded-xl border border-[var(--color-border)] object-cover"
+          />
+        ) : (
+          <div className="flex size-16 shrink-0 items-center justify-center rounded-xl border border-dashed border-[var(--color-border)] text-[10px] text-[var(--color-muted)]">
+            Sin foto
+          </div>
+        )}
+        <div className="grid gap-1">
+          <label className="text-xs text-[var(--color-muted)]">
+            Foto (opcional)
+          </label>
+          <input
+            type="file"
+            name="image"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            onChange={onImageChange}
+            className="text-xs text-[var(--color-muted)] file:mr-2 file:rounded-lg file:border-0 file:bg-[var(--color-surface-2)] file:px-2.5 file:py-1.5 file:text-xs file:text-[var(--color-ink)]"
+          />
+          {product?.image_url ? (
+            <label className="flex items-center gap-1.5 text-xs text-[var(--color-muted)]">
+              <input
+                type="checkbox"
+                name="remove_image"
+                checked={removeImage}
+                onChange={(e) => {
+                  setRemoveImage(e.target.checked);
+                  setImagePreview(e.target.checked ? null : product.image_url);
+                }}
+                className="size-3.5 accent-[var(--color-accent)]"
+              />
+              Quitar la foto actual
+            </label>
+          ) : null}
+        </div>
+      </div>
+
       <label className="grid flex-1 gap-1 min-w-40">
         <span className="text-xs text-[var(--color-muted)]">Nombre</span>
         <input

@@ -40,6 +40,8 @@ export type Product = {
   in_menu: boolean;
   /** Combo o promoción: un producto que agrupa a otros con un precio propio. */
   is_combo: boolean;
+  /** URL pública de la foto en Storage, o null si no tiene. */
+  image_url: string | null;
   active: boolean;
   created_at: string;
 };
@@ -61,6 +63,8 @@ export type MenuItem = {
   price: number;
   description: string | null;
   category: ProductCategory;
+  image_url: string | null;
+  is_combo: boolean;
 };
 
 export type Sector = {

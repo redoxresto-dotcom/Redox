@@ -40,7 +40,7 @@ export default async function TablePage({
     // lo único que puede ver alguien sin sesión.
     supabase
       .from("menu")
-      .select("id, name, price, description, category")
+      .select("id, name, price, description, category, image_url, is_combo")
       .order("category")
       .order("name"),
   ]);

@@ -6,6 +6,7 @@ import {
   getByHour,
   getByPayment,
   getByProduct,
+  getByWaiter,
   parseRange,
   WEEKDAY_LABELS,
   getByWeekday,
@@ -99,6 +100,21 @@ export async function GET(request: NextRequest) {
         rows.map((r) => [
           `${String(r.hour).padStart(2, "0")}:00`,
           Number(r.tickets),
+          Number(r.total),
+        ])
+      );
+      break;
+    }
+
+    case "mozos": {
+      const rows = await getByWaiter(supabase, range);
+      nombre = "por-mozo";
+      contenido = csv(
+        ["Mozo", "Tickets", "Ticket promedio", "Total"],
+        rows.map((r) => [
+          r.waiter_name,
+          Number(r.tickets),
+          Number(r.ticket_avg),
           Number(r.total),
         ])
       );

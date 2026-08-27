@@ -7,6 +7,7 @@ import {
   getByHour,
   getByPayment,
   getByProduct,
+  getByWaiter,
   getByWeekday,
   getSummary,
   parseRange,
@@ -42,6 +43,7 @@ export default async function ReportesPage({
     productos,
     horas,
     dias,
+    mozos,
     entregas,
     catalogoRes,
     canceladosResumen,
@@ -52,6 +54,7 @@ export default async function ReportesPage({
     getByProduct(supabase, range),
     getByHour(supabase, range),
     getByWeekday(supabase, range),
+    getByWaiter(supabase, range),
     getDeliveryTimes(supabase, range),
     supabase.from("products").select("id, name").eq("active", true),
     getCancelledSummary(supabase, range),
@@ -68,6 +71,7 @@ export default async function ReportesPage({
 
   const maxHora = Math.max(1, ...horas.map((h) => Number(h.total)));
   const maxDia = Math.max(1, ...dias.map((d) => Number(d.total)));
+  const maxMozo = Math.max(1, ...mozos.map((m) => Number(m.total)));
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6">
@@ -295,6 +299,68 @@ export default async function ReportesPage({
       </section>
 
       <section className="mt-4">
+        <Card title="Ventas por mozo" wide>
+          {mozos.length === 0 ? (
+            <Vacio />
+          ) : (
+            <>
+              <ul className="grid gap-1.5">
+                {mozos.map((m) => (
+                  <Barra
+                    key={m.waiter_id ?? "sin-mozo"}
+                    label={m.waiter_name}
+                    value={Number(m.total)}
+                    max={maxMozo}
+                  />
+                ))}
+              </ul>
+
+              <div className="mt-4 overflow-x-auto border-t border-[var(--color-border)] pt-3">
+                <table className="w-full min-w-[420px] text-sm">
+                  <thead>
+                    <tr className="text-left text-xs tracking-wide text-[var(--color-muted)] uppercase">
+                      <th className="pb-1.5 font-normal">Mozo</th>
+                      <th className="pb-1.5 text-right font-normal">
+                        Tickets
+                      </th>
+                      <th className="pb-1.5 text-right font-normal">
+                        Ticket promedio
+                      </th>
+                      <th className="pb-1.5 text-right font-normal">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mozos.map((m) => (
+                      <tr
+                        key={m.waiter_id ?? "sin-mozo"}
+                        className="border-t border-[var(--color-border)]"
+                      >
+                        <td className="py-1.5">{m.waiter_name}</td>
+                        <td className="py-1.5 text-right tabular-nums">
+                          {m.tickets}
+                        </td>
+                        <td className="py-1.5 text-right tabular-nums">
+                          {formatMoney(Number(m.ticket_avg))}
+                        </td>
+                        <td className="py-1.5 text-right font-medium tabular-nums">
+                          {formatMoney(Number(m.total))}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <p className="mt-3 text-xs text-[var(--color-muted)]">
+                Se cuenta la venta de quien abrió la mesa, no de quien cobró:
+                es lo que refleja a quién atendió al cliente.
+              </p>
+            </>
+          )}
+        </Card>
+      </section>
+
+      <section className="mt-4">
         <Card title="Pedidos cancelados" wide>
           {cancelados.length === 0 ? (
             <p className="py-6 text-center text-sm text-[var(--color-muted)]">
@@ -346,6 +412,7 @@ export default async function ReportesPage({
           <Exportar range={range} tipo="productos" label="Por producto" />
           <Exportar range={range} tipo="medios" label="Por medio de pago" />
           <Exportar range={range} tipo="horas" label="Por franja horaria" />
+          <Exportar range={range} tipo="mozos" label="Por mozo" />
           <Exportar
             range={range}
             tipo="dias-semana"

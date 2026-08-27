@@ -49,6 +49,13 @@ export type DayRow = {
   transferencia: number;
   otro: number;
 };
+export type WaiterRow = {
+  waiter_id: string | null;
+  waiter_name: string;
+  tickets: number;
+  total: number;
+  ticket_avg: number;
+};
 export type CancelledSummaryRow = { pedidos: number; total: number };
 export type CancelledRow = {
   order_id: string;
@@ -131,6 +138,8 @@ export const getByWeekday = (s: Supabase, r: Range) =>
   rpc<WeekdayRow>(s, "report_by_weekday", r);
 export const getByDay = (s: Supabase, r: Range) =>
   rpc<DayRow>(s, "report_by_day", r);
+export const getByWaiter = (s: Supabase, r: Range) =>
+  rpc<WaiterRow>(s, "report_by_waiter", r);
 
 /** Minutos entre que un plato queda pronto y que llega a la mesa. */
 export const getDeliveryTimes = (s: Supabase, r: Range) =>

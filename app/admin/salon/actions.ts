@@ -12,6 +12,7 @@ const OK: SalonResult = { error: null };
 /** Lo que el editor manda por cada mesa movida. */
 export type LayoutInput = {
   id: string;
+  number: number;
   sector_id: string | null;
   pos_x: number;
   pos_y: number;
@@ -41,7 +42,13 @@ export async function saveLayout(tables: LayoutInput[]): Promise<SalonResult> {
     p_layout: tables,
   });
 
-  if (error) return { error: "No se pudo guardar el plano: " + error.message };
+  if (error) {
+    return {
+      error: error.message.includes("tables_number_key")
+        ? "Hay dos mesas con el mismo número: no se puede guardar hasta que cada una tenga uno distinto."
+        : "No se pudo guardar el plano: " + error.message,
+    };
+  }
 
   revalidatePath("/admin/salon");
   revalidatePath("/admin");

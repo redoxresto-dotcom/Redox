@@ -43,3 +43,20 @@ textarea,
 button {
   font-size: 16px;
 }
+
+/*
+ * Las flechitas nativas de los inputs numéricos (Ancho, Alto, Precio, Costo)
+ * no respetan el border-radius de la caja: quedan cuadradas asomando por la
+ * esquina redondeada, como si el campo se saliera de su recuadro. Se sacan y
+ * se usan los controles propios del teclado numérico para sumar o restar.
+ */
+input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+}

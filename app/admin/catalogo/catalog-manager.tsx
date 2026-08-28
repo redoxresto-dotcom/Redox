@@ -400,11 +400,8 @@ function ProductForm({
   }, 0);
 
   return (
-    <form
-      action={onSubmit}
-      className="flex flex-wrap items-end gap-3"
-    >
-      <div className="flex items-center gap-3">
+    <form action={onSubmit} className="grid gap-3">
+      <div className="flex min-w-0 items-center gap-3">
         {imagePreview && !removeImage ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -417,7 +414,7 @@ function ProductForm({
             Sin foto
           </div>
         )}
-        <div className="grid gap-1">
+        <div className="grid min-w-0 gap-1">
           <label className="text-xs text-[var(--color-muted)]">
             Foto (opcional)
           </label>
@@ -426,7 +423,7 @@ function ProductForm({
             name="image"
             accept="image/jpeg,image/png,image/webp,image/gif"
             onChange={onImageChange}
-            className="text-xs text-[var(--color-muted)] file:mr-2 file:rounded-lg file:border-0 file:bg-[var(--color-surface-2)] file:px-2.5 file:py-1.5 file:text-xs file:text-[var(--color-ink)]"
+            className="max-w-full text-xs text-[var(--color-muted)] file:mr-2 file:rounded-lg file:border-0 file:bg-[var(--color-surface-2)] file:px-2.5 file:py-1.5 file:text-xs file:text-[var(--color-ink)]"
           />
           {product?.image_url ? (
             <label className="flex items-center gap-1.5 text-xs text-[var(--color-muted)]">
@@ -446,71 +443,83 @@ function ProductForm({
         </div>
       </div>
 
-      <label className="grid flex-1 gap-1 min-w-40">
-        <span className="text-xs text-[var(--color-muted)]">Nombre</span>
-        <input
-          name="name"
-          defaultValue={product?.name}
-          required
-          autoFocus
-          className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
-        />
-      </label>
+      {/*
+        Grid explícito en vez de flex-wrap: con flex, el ancho de "Nombre"
+        dependía de cuánto le sobrara a sus vecinos y en pantallas angostas
+        terminaba pisando a "Categoría". Con columnas fijas cada campo tiene
+        su lugar reservado sin importar el ancho de la pantalla.
+      */}
+      <div className="grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-4">
+        <label className="col-span-2 grid min-w-0 gap-1">
+          <span className="text-xs text-[var(--color-muted)]">Nombre</span>
+          <input
+            name="name"
+            defaultValue={product?.name}
+            required
+            autoFocus
+            className="w-full min-w-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+          />
+        </label>
 
-      <label className="grid min-w-0 gap-1">
-        <span className="text-xs text-[var(--color-muted)]">Categoría</span>
-        <select
-          name="category"
-          defaultValue={product?.category ?? "bebida"}
-          className="w-full min-w-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
-        >
-          {CATEGORIES.map((c) => (
-            <option key={c} value={c}>
-              {CATEGORY_LABELS[c]}
-            </option>
-          ))}
-        </select>
-      </label>
+        <label className="grid min-w-0 gap-1">
+          <span className="text-xs text-[var(--color-muted)]">Categoría</span>
+          <select
+            name="category"
+            defaultValue={product?.category ?? "bebida"}
+            className="w-full min-w-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+          >
+            {CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {CATEGORY_LABELS[c]}
+              </option>
+            ))}
+          </select>
+        </label>
 
-      <label className="grid min-w-0 gap-1">
-        <span className="text-xs text-[var(--color-muted)]">Estación</span>
-        <select
-          name="station"
-          defaultValue={product?.station ?? "barra"}
-          className="w-full min-w-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
-        >
-          {STATIONS.map((st) => (
-            <option key={st} value={st}>
-              {STATION_LABELS[st]}
-            </option>
-          ))}
-        </select>
-      </label>
+        <label className="grid min-w-0 gap-1">
+          <span className="text-xs text-[var(--color-muted)]">Estación</span>
+          <select
+            name="station"
+            defaultValue={product?.station ?? "barra"}
+            className="w-full min-w-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+          >
+            {STATIONS.map((st) => (
+              <option key={st} value={st}>
+                {STATION_LABELS[st]}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
 
-      <label className="grid w-28 min-w-0 max-w-full gap-1">
-        <span className="text-xs text-[var(--color-muted)]">Precio venta</span>
-        <input
-          name="price"
-          type="number"
-          min="0"
-          step="0.01"
-          defaultValue={product?.price ?? ""}
-          required
-          className="w-full min-w-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm tabular-nums outline-none focus:border-[var(--color-accent)]"
-        />
-      </label>
+      <div className="grid min-w-0 grid-cols-2 gap-3 sm:w-64">
+        <label className="grid min-w-0 gap-1">
+          <span className="text-xs text-[var(--color-muted)]">
+            Precio venta
+          </span>
+          <input
+            name="price"
+            type="number"
+            min="0"
+            step="0.01"
+            defaultValue={product?.price ?? ""}
+            required
+            className="w-full min-w-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm tabular-nums outline-none focus:border-[var(--color-accent)]"
+          />
+        </label>
 
-      <label className="grid w-28 min-w-0 max-w-full gap-1">
-        <span className="text-xs text-[var(--color-muted)]">Costo</span>
-        <input
-          name="cost"
-          type="number"
-          min="0"
-          step="0.01"
-          defaultValue={product?.cost ?? 0}
-          className="w-full min-w-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm tabular-nums outline-none focus:border-[var(--color-accent)]"
-        />
-      </label>
+        <label className="grid min-w-0 gap-1">
+          <span className="text-xs text-[var(--color-muted)]">Costo</span>
+          <input
+            name="cost"
+            type="number"
+            min="0"
+            step="0.01"
+            defaultValue={product?.cost ?? 0}
+            className="w-full min-w-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm tabular-nums outline-none focus:border-[var(--color-accent)]"
+          />
+        </label>
+      </div>
 
       <label className="grid w-full gap-1">
         <span className="text-xs text-[var(--color-muted)]">
@@ -524,26 +533,28 @@ function ProductForm({
         />
       </label>
 
-      <label className="flex items-center gap-2 pb-2">
-        <input
-          type="checkbox"
-          name="in_menu"
-          defaultChecked={product?.in_menu ?? true}
-          className="size-4 accent-[var(--color-accent)]"
-        />
-        <span className="text-sm">Mostrar en la carta</span>
-      </label>
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            name="in_menu"
+            defaultChecked={product?.in_menu ?? true}
+            className="size-4 accent-[var(--color-accent)]"
+          />
+          <span className="text-sm">Mostrar en la carta</span>
+        </label>
 
-      <label className="flex items-center gap-2 pb-2">
-        <input
-          type="checkbox"
-          name="is_combo"
-          checked={isCombo}
-          onChange={(e) => setIsCombo(e.target.checked)}
-          className="size-4 accent-[var(--color-accent)]"
-        />
-        <span className="text-sm">Es un combo o promoción</span>
-      </label>
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            name="is_combo"
+            checked={isCombo}
+            onChange={(e) => setIsCombo(e.target.checked)}
+            className="size-4 accent-[var(--color-accent)]"
+          />
+          <span className="text-sm">Es un combo o promoción</span>
+        </label>
+      </div>
 
       {isCombo ? (
         <div className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3">

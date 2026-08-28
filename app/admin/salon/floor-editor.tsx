@@ -93,6 +93,9 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
 
   const visibles = layout.filter((t) => t.sector_id === sectorId);
   const selected = layout.find((t) => t.id === selectedId) ?? null;
+  const numeroRepetido =
+    selected !== null &&
+    layout.some((t) => t.id !== selected.id && t.number === selected.number);
 
   const patch = useCallback((id: string, cambios: Partial<BarTable>) => {
     setLayout((prev) =>
@@ -190,6 +193,7 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
       .filter((t) => dirty.has(t.id))
       .map((t) => ({
         id: t.id,
+        number: t.number,
         sector_id: t.sector_id,
         pos_x: t.pos_x,
         pos_y: t.pos_y,
@@ -479,6 +483,29 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
                   ✕
                 </button>
               </div>
+
+              <label className="grid gap-1">
+                <span className="text-xs text-[var(--color-muted)]">
+                  Número de mesa
+                </span>
+                <input
+                  key={`${selected.id}-number`}
+                  type="number"
+                  min={1}
+                  step={1}
+                  defaultValue={selected.number}
+                  onBlur={(e) => {
+                    const n = Math.max(1, Math.round(Number(e.target.value)));
+                    patch(selected.id, { number: n || selected.number });
+                  }}
+                  className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm tabular-nums outline-none focus:border-[var(--color-accent)]"
+                />
+                {numeroRepetido ? (
+                  <span className="text-xs text-[var(--color-danger)]">
+                    Ya hay otra mesa con el número {selected.number}.
+                  </span>
+                ) : null}
+              </label>
 
               <label className="grid gap-1">
                 <span className="text-xs text-[var(--color-muted)]">

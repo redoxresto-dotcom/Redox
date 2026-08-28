@@ -370,7 +370,14 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
           ref={wrapRef}
           // El escalado es una transformación: no encoge la caja. Sin fijarle
           // la altura, el plano deja un hueco enorme debajo.
-          style={{ height: CANVAS_H * scale }}
+          //
+          // contain: paint le exige al navegador recortar TODO lo de adentro
+          // al borde de esta caja, transform incluido. Sin esto, Firefox deja
+          // que la mesa transformada (scale) se pinte un poco más allá del
+          // borde redondeado durante el primer render (antes de que el
+          // ResizeObserver ajuste la escala), y esa franja quedaba asomando
+          // por debajo del panel de la derecha.
+          style={{ height: CANVAS_H * scale, contain: "paint" }}
           className="min-w-0 overflow-x-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]"
         >
           {/* Caja con la medida ya escalada: el transform no encoge el div en

@@ -355,13 +355,16 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
       </div>
 
       {/*
-        min-w-0 en los dos hijos: sin eso, el plano (que puede ser mucho más
-        ancho que la pantalla) fuerza a su columna del grid a estirarse para
-        entrar entero. Chrome lo deja pasar porque trata el overflow-x-auto
-        como encogible; Firefox no, y ahí es donde el panel de la derecha
-        terminaba empujado fuera de la pantalla.
+        minmax(0,1fr) y no 1fr a secas: un "1fr" solo vale "minmax(auto, 1fr)",
+        así que esa columna no se achica más allá del contenido del plano
+        (que puede ser mucho más ancho que la pantalla). Chrome lo dejaba
+        pasar igual; Firefox lo respeta al pie de la letra y terminaba
+        estirando esa columna, empujando el panel de la mesa fuera de su
+        lugar (o superpuesto con el plano). min-w-0 en los dos hijos es el
+        mismo seguro por si algún nieto vuelve a traer un ancho intrínseco
+        grande.
       */}
-      <div className="grid gap-4 lg:grid-cols-[1fr_18rem]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
         {/* Plano */}
         <div
           ref={wrapRef}

@@ -354,6 +354,13 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
         </div>
       </div>
 
+      {/*
+        min-w-0 en los dos hijos: sin eso, el plano (que puede ser mucho más
+        ancho que la pantalla) fuerza a su columna del grid a estirarse para
+        entrar entero. Chrome lo deja pasar porque trata el overflow-x-auto
+        como encogible; Firefox no, y ahí es donde el panel de la derecha
+        terminaba empujado fuera de la pantalla.
+      */}
       <div className="grid gap-4 lg:grid-cols-[1fr_18rem]">
         {/* Plano */}
         <div
@@ -361,7 +368,7 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
           // El escalado es una transformación: no encoge la caja. Sin fijarle
           // la altura, el plano deja un hueco enorme debajo.
           style={{ height: CANVAS_H * scale }}
-          className="overflow-x-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]"
+          className="min-w-0 overflow-x-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]"
         >
           {/* Caja con la medida ya escalada: el transform no encoge el div en
               el layout, y sin esto sobra plano para desplazar al costado. */}
@@ -420,7 +427,7 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
         </div>
 
         {/* Panel de la mesa elegida */}
-        <aside className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+        <aside className="min-w-0 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
           {selected === null ? (
             <div className="grid gap-3">
               <p className="text-sm text-[var(--color-muted)]">
@@ -550,8 +557,8 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
                 </select>
               </label>
 
-              <div className="grid grid-cols-2 gap-2">
-                <label className="grid gap-1">
+              <div className="grid min-w-0 grid-cols-2 gap-2">
+                <label className="grid min-w-0 gap-1">
                   <span className="text-xs text-[var(--color-muted)]">
                     Ancho
                   </span>
@@ -578,7 +585,7 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
                     className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm tabular-nums outline-none focus:border-[var(--color-accent)]"
                   />
                 </label>
-                <label className="grid gap-1">
+                <label className="grid min-w-0 gap-1">
                   <span className="text-xs text-[var(--color-muted)]">
                     Alto
                   </span>

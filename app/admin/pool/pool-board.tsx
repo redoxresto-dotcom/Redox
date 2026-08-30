@@ -298,8 +298,6 @@ export function PoolBoard({
                 key={mesa.session_id ?? "libre"}
                 mesa={mesa}
                 ahora={ahora}
-                reservas={reservasPorMesa.get(mesa.table_id) ?? []}
-                isManager={isManager}
                 isPending={isPending}
                 onRun={run}
               />
@@ -307,6 +305,18 @@ export function PoolBoard({
           ))}
         </ul>
       )}
+
+      {pendientes > 0 ? (
+        <ReservasPendientes
+          estado={estado}
+          reservasPorMesa={reservasPorMesa}
+          total={pendientes}
+          ahora={ahora}
+          isManager={isManager}
+          isPending={isPending}
+          onRun={run}
+        />
+      ) : null}
 
       {config && isManager ? (
         <Ajustes
@@ -325,22 +335,17 @@ export function PoolBoard({
 function MesaPool({
   mesa,
   ahora,
-  reservas,
-  isManager,
   isPending,
   onRun,
 }: {
   mesa: PoolStatus;
   ahora: number;
-  reservas: PoolReservation[];
-  isManager: boolean;
   isPending: boolean;
   onRun: (fn: () => Promise<{ error: string | null }>) => void;
 }) {
   const [otro, setOtro] = useState(false);
   const fase = faseDe(mesa, ahora);
   const restante = mesa.ends_at ? new Date(mesa.ends_at).getTime() - ahora : 0;
-  const mesaLibre = !mesa.session_id;
 
   // Un aparato que no saluda hace más de un minuto está caído. Preguntar cada
   // quince segundos y no aparecer en sesenta no es demora, es un problema.
@@ -536,90 +541,6 @@ function MesaPool({
         ) : null}
       </div>
 
-      {reservas.length > 0 ? (
-        <div className="mt-3 border-t border-[var(--color-border)] pt-2">
-          <p className="mb-1.5 text-xs font-medium text-[var(--color-muted)]">
-            Reservas
-            {mesaLibre ? (
-              <span className="ml-1.5 text-[var(--color-free)]">
-                · mesa libre, se puede activar
-              </span>
-            ) : (
-              <span className="ml-1.5">· esperan a que termine la partida</span>
-            )}
-          </p>
-          <ul className="grid gap-1.5">
-            {reservas.map((r) => {
-              const demora = demoraDe(r.scheduled_at, ahora);
-              return (
-                <li
-                  key={r.id}
-                  className="flex items-center gap-2 rounded-lg bg-[var(--color-surface-2)] px-2 py-1.5 text-sm"
-                >
-                  <span
-                    className={`tabular-nums ${DEMORA_TINTA[demora]}`}
-                    title={
-                      demora === "en-hora"
-                        ? "Turno reservado"
-                        : "El cliente ya debería haber llegado"
-                    }
-                  >
-                    {horaCorta(r.scheduled_at)}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate">
-                    {r.customer_name}
-                    <span className="ml-1 text-xs text-[var(--color-muted)]">
-                      {poolMinutosATexto(r.play_minutes)}
-                    </span>
-                  </span>
-                  {isManager ? (
-                    <>
-                      <button
-                        type="button"
-                        disabled={isPending || !mesaLibre}
-                        title={
-                          mesaLibre
-                            ? "Arranca la partida con esta reserva"
-                            : "La mesa está ocupada"
-                        }
-                        onClick={() =>
-                          onRun(() => activatePoolReservation(r.id))
-                        }
-                        className="rounded-md bg-[var(--color-accent)] px-2 py-1 text-xs font-semibold text-[#04121c] disabled:opacity-40"
-                      >
-                        Activar
-                      </button>
-                      <button
-                        type="button"
-                        disabled={isPending}
-                        title="Avisó que no viene o se canceló"
-                        onClick={() =>
-                          onRun(() => releasePoolReservation(r.id))
-                        }
-                        className="rounded-md border border-[var(--color-border)] px-2 py-1 text-xs text-[var(--color-muted)] transition-colors hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:opacity-40"
-                      >
-                        Liberar
-                      </button>
-                      <button
-                        type="button"
-                        disabled={isPending}
-                        title="No vino ni avisó"
-                        onClick={() =>
-                          onRun(() => releasePoolReservation(r.id, true))
-                        }
-                        className="rounded-md border border-[var(--color-border)] px-2 py-1 text-xs text-[var(--color-muted)] transition-colors hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:opacity-40"
-                      >
-                        No vino
-                      </button>
-                    </>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ) : null}
-
       <footer
         className={`mt-3 border-t border-[var(--color-border)] pt-2 text-xs ${
           pañoVencido
@@ -631,6 +552,135 @@ function MesaPool({
         {pañoVencido ? " · toca cambiarlo" : null}
       </footer>
     </article>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+/**
+ * La cola de reservas, junta y debajo de las mesas. Antes iba dentro de cada
+ * tarjeta, pero con varias reservas la estiraba y descuadraba la grilla; acá
+ * crece para abajo sin tocar el alto de las mesas.
+ */
+function ReservasPendientes({
+  estado,
+  reservasPorMesa,
+  total,
+  ahora,
+  isManager,
+  isPending,
+  onRun,
+}: {
+  estado: PoolStatus[];
+  reservasPorMesa: Map<string, PoolReservation[]>;
+  total: number;
+  ahora: number;
+  isManager: boolean;
+  isPending: boolean;
+  onRun: (fn: () => Promise<{ error: string | null }>) => void;
+}) {
+  return (
+    <section className="mt-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 sm:p-5">
+      <h2 className="mb-3 text-sm font-medium tracking-wide text-[var(--color-muted)] uppercase">
+        Reservas pendientes
+        <span className="ml-2 rounded-full bg-[var(--color-accent)]/20 px-1.5 py-0.5 text-xs font-semibold text-[var(--color-accent)] tabular-nums">
+          {total}
+        </span>
+      </h2>
+
+      <div className="grid gap-4">
+        {estado.map((mesa) => {
+          const lista = reservasPorMesa.get(mesa.table_id) ?? [];
+          if (lista.length === 0) return null;
+          const libre = !mesa.session_id;
+
+          return (
+            <div key={mesa.table_id} className="grid gap-1.5">
+              <p className="text-xs font-semibold text-[var(--color-muted)]">
+                Mesa {mesa.table_number}
+                {libre ? (
+                  <span className="ml-1.5 font-medium text-[var(--color-free)]">
+                    · libre, se puede activar
+                  </span>
+                ) : (
+                  <span className="ml-1.5 font-normal">· en partida</span>
+                )}
+              </p>
+
+              <ul className="grid gap-1.5">
+                {lista.map((r) => {
+                  const demora = demoraDe(r.scheduled_at, ahora);
+                  return (
+                    <li
+                      key={r.id}
+                      className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg bg-[var(--color-surface-2)] px-3 py-2 text-sm"
+                    >
+                      <span
+                        className={`tabular-nums ${DEMORA_TINTA[demora]}`}
+                        title={
+                          demora === "en-hora"
+                            ? "Turno reservado"
+                            : "El cliente ya debería haber llegado"
+                        }
+                      >
+                        {horaCorta(r.scheduled_at)}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate">
+                        {r.customer_name}
+                        <span className="ml-1.5 text-xs text-[var(--color-muted)]">
+                          {poolMinutosATexto(r.play_minutes)}
+                        </span>
+                      </span>
+                      {isManager ? (
+                        <div className="flex shrink-0 gap-1.5">
+                          <button
+                            type="button"
+                            disabled={isPending || !libre}
+                            title={
+                              libre
+                                ? "Arranca la partida con esta reserva"
+                                : "La mesa está ocupada"
+                            }
+                            onClick={() =>
+                              onRun(() => activatePoolReservation(r.id))
+                            }
+                            className="rounded-md bg-[var(--color-accent)] px-2.5 py-1 text-xs font-semibold text-[#04121c] disabled:opacity-40"
+                          >
+                            Activar
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isPending}
+                            title="Avisó que no viene o se canceló"
+                            onClick={() =>
+                              onRun(() => releasePoolReservation(r.id))
+                            }
+                            className="rounded-md border border-[var(--color-border)] px-2.5 py-1 text-xs text-[var(--color-muted)] transition-colors hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:opacity-40"
+                          >
+                            Liberar
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isPending}
+                            title="No vino ni avisó"
+                            onClick={() =>
+                              onRun(() => releasePoolReservation(r.id, true))
+                            }
+                            className="rounded-md border border-[var(--color-border)] px-2.5 py-1 text-xs text-[var(--color-muted)] transition-colors hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:opacity-40"
+                          >
+                            No vino
+                          </button>
+                        </div>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 

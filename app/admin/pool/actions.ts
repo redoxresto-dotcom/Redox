@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { requireAdmin, requireStaff } from "@/lib/auth";
+import { normalizarCelularUy } from "@/lib/types";
 
 export type PoolResult = { error: string | null };
 
@@ -18,6 +19,18 @@ function traducir(mensaje: string, porDefecto: string): string {
     "Los minutos tienen que ser un número positivo",
     "La partida no existe o ya está terminada",
     "Solo el personal",
+    // Reservas
+    "Sólo administración",
+    "Falta el nombre del cliente",
+    "Falta el celular del cliente",
+    "Falta la hora del turno",
+    "Las horas de juego tienen que ser",
+    "No se pueden reservar más de",
+    "Ya hay una reserva para esa mesa a esa hora",
+    "La reserva no existe",
+    "Esa reserva ya no está pendiente",
+    "La mesa ya tiene una partida en curso",
+    "Sólo se puede liberar una reserva pendiente",
   ];
 
   const encontrado = conocidos.find((c) => mensaje.includes(c));
@@ -122,6 +135,123 @@ export async function expireDuePoolSessions(): Promise<PoolResult> {
   if (error) return { error: error.message };
 
   revalidatePath("/admin/pool");
+  return OK;
+}
+
+// ---------------------------------------------------------------------------
+//  Reservas: de administración
+//
+//  Una reserva es un turno para una mesa de pool. No enciende nada: cuando el
+//  cliente llega, se activa a mano y recién ahí arranca una partida.
+// ---------------------------------------------------------------------------
+
+/** Registra un turno para una mesa de pool. */
+export async function createPoolReservation(datos: {
+  tableId: string;
+  customerName: string;
+  phone: string;
+  scheduledAt: string;
+  minutes: number;
+}): Promise<PoolResult> {
+  await requireAdmin();
+
+  if (!Number.isInteger(datos.minutes) || datos.minutes <= 0) {
+    return { error: "Las horas de juego tienen que ser un número positivo." };
+  }
+
+  const celular = normalizarCelularUy(datos.phone);
+  if (!celular) {
+    return {
+      error: "El celular no parece un celular uruguayo (09X XXX XXX).",
+    };
+  }
+
+  // El input datetime-local manda "YYYY-MM-DDTHH:mm" sin zona. Se interpreta en
+  // hora de Montevideo con offset fijo (Uruguay no cambia de hora desde 2015),
+  // igual que los reportes: si no, el servidor en UTC lo correría tres horas.
+  const crudo = datos.scheduledAt.trim();
+  const match = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(crudo);
+  const cuando = match
+    ? new Date(`${crudo.length === 16 ? `${crudo}:00` : crudo}-03:00`)
+    : new Date(NaN);
+  if (Number.isNaN(cuando.getTime())) {
+    return { error: "La hora del turno no es válida." };
+  }
+
+  const supabase = await getSupabaseServerClient();
+  const { error } = await supabase.rpc("pool_reserve", {
+    p_table_id: datos.tableId,
+    p_customer: datos.customerName,
+    p_phone: celular,
+    p_scheduled_at: cuando.toISOString(),
+    p_minutes: datos.minutes,
+  });
+
+  if (error)
+    return { error: traducir(error.message, "No se pudo crear la reserva") };
+
+  revalidatePath("/admin/pool");
+  revalidatePath("/admin/pool/reservas");
+  revalidatePath("/pool");
+  return OK;
+}
+
+/**
+ * Enciende la mesa a partir de una reserva: llega el cliente y alguien la
+ * activa. Arranca una partida con los minutos de la reserva, salvo que se pasen
+ * otros (por si compran otra cosa al llegar).
+ */
+export async function activatePoolReservation(
+  reservationId: string,
+  minutes?: number,
+): Promise<PoolResult> {
+  await requireAdmin();
+
+  if (
+    minutes !== undefined &&
+    (!Number.isInteger(minutes) || minutes <= 0)
+  ) {
+    return { error: "Los minutos tienen que ser un número entero positivo." };
+  }
+
+  const supabase = await getSupabaseServerClient();
+  const { error } = await supabase.rpc("pool_reservation_activate", {
+    p_id: reservationId,
+    p_minutes: minutes ?? null,
+  });
+
+  if (error)
+    return { error: traducir(error.message, "No se pudo activar la reserva") };
+
+  revalidatePath("/admin/pool");
+  revalidatePath("/admin/pool/reservas");
+  revalidatePath("/admin");
+  revalidatePath("/pool");
+  return OK;
+}
+
+/**
+ * Saca un turno de la cola. `noShow` distingue "no vino ni avisó" de "avisó
+ * que no viene", que se registran distinto para poder medirlos.
+ */
+export async function releasePoolReservation(
+  reservationId: string,
+  noShow = false,
+): Promise<PoolResult> {
+  await requireAdmin();
+
+  const supabase = await getSupabaseServerClient();
+  const { error } = await supabase.rpc("pool_reservation_release", {
+    p_id: reservationId,
+    p_no_show: noShow,
+  });
+
+  if (error)
+    return { error: traducir(error.message, "No se pudo liberar la reserva") };
+
+  revalidatePath("/admin/pool");
+  revalidatePath("/admin/pool/reservas");
+  revalidatePath("/pool");
   return OK;
 }
 

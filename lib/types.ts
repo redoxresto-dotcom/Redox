@@ -271,6 +271,67 @@ export function poolMinutosATexto(minutos: number): string {
   return `${Math.floor(minutos / 60)} h ${minutos % 60} min`;
 }
 
+/** Estados de una reserva de mesa de pool. */
+export type PoolReservationStatus =
+  | "reservada"
+  | "activada"
+  | "liberada"
+  | "no_show"
+  | "vencida";
+
+/**
+ * Un turno para una mesa de pool, tal como lo devuelve `pool_day_reservations()`.
+ *
+ * La reserva no enciende la mesa: cuando el cliente llega, administración la
+ * activa a mano y recién ahí arranca una partida.
+ */
+export type PoolReservation = {
+  id: string;
+  table_id: string;
+  table_number: number;
+  customer_name: string;
+  phone: string;
+  /** El turno: la "hora de reserva" que se muestra en la grilla del salón. */
+  scheduled_at: string;
+  play_minutes: number;
+  status: PoolReservationStatus;
+  session_id: string | null;
+  created_at: string;
+  activated_at: string | null;
+  released_at: string | null;
+  created_by_name: string | null;
+  activated_by_name: string | null;
+  released_by_name: string | null;
+};
+
+/** Opciones de "horas de juego" al reservar. Mismos bloques que una venta. */
+export const POOL_RESERVA_BLOQUES = [30, 60, 90, 120] as const;
+
+/**
+ * Normaliza un celular uruguayo a nueve dígitos (`09XXXXXXX`), o devuelve null
+ * si no lo parece. Acepta espacios, guiones y el prefijo internacional +598.
+ */
+export function normalizarCelularUy(crudo: string): string | null {
+  let d = (crudo ?? "").replace(/\D/g, "");
+  if (d.startsWith("598")) d = d.slice(3);
+  if (d.length === 8 && d.startsWith("9")) d = `0${d}`;
+  return /^09\d{7}$/.test(d) ? d : null;
+}
+
+/** `09XXXXXXX` → `09X XXX XXX` para mostrar. */
+export function formatCelularUy(normalizado: string): string {
+  return /^09\d{7}$/.test(normalizado)
+    ? `${normalizado.slice(0, 3)} ${normalizado.slice(3, 6)} ${normalizado.slice(6)}`
+    : normalizado;
+}
+
+/**
+ * Un turno que ya pasó su hora y sigue sin activarse es un cliente demorado.
+ * A los primeros minutos se marca en ámbar; pasado el segundo, en rojo.
+ */
+export const POOL_RESERVA_DEMORA_MINUTES = 10;
+export const POOL_RESERVA_TARDE_MINUTES = 20;
+
 export const TABLE_SHAPES: readonly TableShape[] = [
   "redonda",
   "cuadrada",

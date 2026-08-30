@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { Fragment, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { playBeep } from "@/lib/beep";
 import { expireDuePoolSessions } from "../admin/pool/actions";
 import { RedoxFlask } from "../_components/brand";
-import type { PoolStatus } from "@/lib/types";
+import type { PoolReservation, PoolStatus } from "@/lib/types";
 
 type Fase = "libre" | "jugando" | "por-terminar" | "vencida";
 
@@ -34,7 +34,24 @@ const MENSAJE: Record<Fase, string> = {
   vencida: "Tiempo cumplido",
 };
 
-export function PoolTv({ estado }: { estado: PoolStatus[] }) {
+/** "14:30" — la hora del turno. */
+function horaCorta(iso: string): string {
+  return new Date(iso).toLocaleTimeString("es-UY", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/** Cuántas reservas se muestran por mesa a la vez. */
+const RESERVAS_VISIBLES = 2;
+
+export function PoolTv({
+  estado,
+  reservas,
+}: {
+  estado: PoolStatus[];
+  reservas: PoolReservation[];
+}) {
   const router = useRouter();
   const [ahora, setAhora] = useState(() => Date.now());
   const [mudo, setMudo] = useState(false);
@@ -89,12 +106,30 @@ export function PoolTv({ estado }: { estado: PoolStatus[] }) {
         { event: "*", schema: "public", table: "pool_sessions" },
         () => router.refresh(),
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "pool_reservations" },
+        () => router.refresh(),
+      )
       .subscribe();
 
     return () => {
       void supabase.removeChannel(channel);
     };
   }, [router]);
+
+  // Cola de turnos pendientes por mesa, en orden de hora. Se muestran de a dos;
+  // los demás entran a medida que estos se activan o se liberan.
+  const colaPorMesa = new Map<string, PoolReservation[]>();
+  for (const r of reservas) {
+    if (r.status !== "reservada") continue;
+    const lista = colaPorMesa.get(r.table_id) ?? [];
+    lista.push(r);
+    colaPorMesa.set(r.table_id, lista);
+  }
+  for (const lista of colaPorMesa.values()) {
+    lista.sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
+  }
 
   return (
     <main className="flex min-h-screen flex-col p-6">
@@ -153,8 +188,12 @@ export function PoolTv({ estado }: { estado: PoolStatus[] }) {
                     ? "text-[var(--color-ink)]"
                     : "text-[var(--color-muted)]";
 
+            const cola = colaPorMesa.get(mesa.table_id) ?? [];
+            const visibles = cola.slice(0, RESERVAS_VISIBLES);
+            const restantes = cola.length - visibles.length;
+
             return (
-              <li key={mesa.table_id}>
+              <li key={mesa.table_id} className="flex flex-col gap-3">
                 <article
                   className={`flex min-h-64 flex-col items-center justify-center rounded-3xl border-4 p-8 text-center transition-colors ${borde}`}
                 >
@@ -186,6 +225,40 @@ export function PoolTv({ estado }: { estado: PoolStatus[] }) {
                     </p>
                   ) : null}
                 </article>
+
+                {visibles.length > 0 ? (
+                  <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
+                    <div className="grid grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-2 text-sm">
+                      <span className="text-xs font-semibold tracking-[0.12em] text-[var(--color-muted)] uppercase">
+                        Reservada
+                      </span>
+                      <span className="text-xs font-semibold tracking-[0.12em] text-[var(--color-muted)] uppercase">
+                        Usuario
+                      </span>
+                      <span className="text-xs font-semibold tracking-[0.12em] text-[var(--color-muted)] uppercase">
+                        Hora
+                      </span>
+                      {visibles.map((r) => (
+                        <Fragment key={r.id}>
+                          <span className="inline-flex items-center rounded-full bg-[var(--color-brand-soft)]/15 px-2 py-0.5 text-xs font-medium text-[var(--color-brand-soft)]">
+                            Reservada
+                          </span>
+                          <span className="min-w-0 truncate font-medium">
+                            {r.customer_name}
+                          </span>
+                          <span className="tabular-nums text-[var(--color-muted)]">
+                            {horaCorta(r.scheduled_at)}
+                          </span>
+                        </Fragment>
+                      ))}
+                    </div>
+                    {restantes > 0 ? (
+                      <p className="mt-2 text-center text-xs text-[var(--color-muted)]">
+                        +{restantes} en espera
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
               </li>
             );
           })}

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { requireStaff } from "@/lib/auth";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { PoolTv } from "./pool-tv";
-import type { PoolStatus } from "@/lib/types";
+import type { PoolReservation, PoolStatus } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -28,9 +28,20 @@ export default async function PoolTvPage() {
 
   // Cierra lo vencido antes de dibujar. Si los aparatos están desconectados,
   // esta pantalla es la que hace avanzar el reloj.
-  await supabase.rpc("pool_expire_due");
+  await Promise.all([
+    supabase.rpc("pool_expire_due"),
+    supabase.rpc("pool_reservations_expire_due"),
+  ]);
 
-  const { data } = await supabase.rpc("pool_status");
+  const [estadoRes, reservasRes] = await Promise.all([
+    supabase.rpc("pool_status"),
+    supabase.rpc("pool_day_reservations"),
+  ]);
 
-  return <PoolTv estado={(data ?? []) as PoolStatus[]} />;
+  return (
+    <PoolTv
+      estado={(estadoRes.data ?? []) as PoolStatus[]}
+      reservas={(reservasRes.data ?? []) as PoolReservation[]}
+    />
+  );
 }

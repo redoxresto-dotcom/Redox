@@ -1,7 +1,12 @@
 import { requireStaff } from "@/lib/auth";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { PoolBoard } from "./pool-board";
-import { hasRank, type BarTable, type PoolStatus } from "@/lib/types";
+import {
+  hasRank,
+  type BarTable,
+  type PoolReservation,
+  type PoolStatus,
+} from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -11,9 +16,12 @@ export default async function PoolPage() {
 
   // Cierra lo que ya venció antes de mostrar nada. Si los aparatos están
   // desconectados, esta es la única forma de que el reloj avance.
-  await supabase.rpc("pool_expire_due");
+  await Promise.all([
+    supabase.rpc("pool_expire_due"),
+    supabase.rpc("pool_reservations_expire_due"),
+  ]);
 
-  const [estadoRes, tarifaRes, mesasRes] = await Promise.all([
+  const [estadoRes, tarifaRes, mesasRes, reservasRes] = await Promise.all([
     supabase.rpc("pool_status"),
     supabase
       .from("products")
@@ -22,6 +30,7 @@ export default async function PoolPage() {
       .maybeSingle<{ id: string; name: string; price: number }>(),
     // Mesas del salón que todavía no son de pool: las candidatas a serlo.
     supabase.from("tables").select("id, number").order("number"),
+    supabase.rpc("pool_day_reservations"),
   ]);
 
   const estado = (estadoRes.data ?? []) as PoolStatus[];
@@ -38,6 +47,7 @@ export default async function PoolPage() {
       estado={estado}
       tarifa={tarifaRes.data ?? null}
       candidatas={candidatas}
+      reservas={(reservasRes.data ?? []) as PoolReservation[]}
       isManager={hasRank(profile.role, "admin")}
     />
   );

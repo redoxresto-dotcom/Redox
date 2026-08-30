@@ -6,10 +6,13 @@ import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { playBeep } from "@/lib/beep";
 import {
+  activatePoolReservation,
   addPoolTable,
+  createPoolReservation,
   endPoolSession,
   expireDuePoolSessions,
   logPoolMaintenance,
+  releasePoolReservation,
   removePoolTable,
   sellPoolTime,
   setPoolPlayers,
@@ -17,9 +20,14 @@ import {
 } from "./actions";
 import {
   formatMoney,
+  normalizarCelularUy,
   POOL_BLOQUES,
   POOL_LECTOR_TIMEOUT_MS,
+  POOL_RESERVA_BLOQUES,
+  POOL_RESERVA_DEMORA_MINUTES,
+  POOL_RESERVA_TARDE_MINUTES,
   poolMinutosATexto,
+  type PoolReservation,
   type PoolStatus,
 } from "@/lib/types";
 
@@ -27,6 +35,7 @@ type Props = {
   estado: PoolStatus[];
   tarifa: { id: string; name: string; price: number } | null;
   candidatas: { id: string; number: number }[];
+  reservas: PoolReservation[];
   isManager: boolean;
 };
 
@@ -60,11 +69,42 @@ const TONO: Record<Fase, string> = {
   vencida: "border-[var(--color-danger)] bg-[var(--color-danger)]/15",
 };
 
-export function PoolBoard({ estado, tarifa, candidatas, isManager }: Props) {
+/** "14:30" — la hora del turno, que es lo que se lee de un vistazo. */
+function horaCorta(iso: string): string {
+  return new Date(iso).toLocaleTimeString("es-UY", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+type Demora = "en-hora" | "demorado" | "tarde";
+
+/** Un turno cuya hora ya pasó y sigue sin activarse: cliente demorado. */
+function demoraDe(iso: string, ahora: number): Demora {
+  const atraso = ahora - new Date(iso).getTime();
+  if (atraso < POOL_RESERVA_DEMORA_MINUTES * 60_000) return "en-hora";
+  if (atraso < POOL_RESERVA_TARDE_MINUTES * 60_000) return "demorado";
+  return "tarde";
+}
+
+const DEMORA_TINTA: Record<Demora, string> = {
+  "en-hora": "text-[var(--color-muted)]",
+  demorado: "text-[var(--color-busy)]",
+  tarde: "font-semibold text-[var(--color-danger)]",
+};
+
+export function PoolBoard({
+  estado,
+  tarifa,
+  candidatas,
+  reservas,
+  isManager,
+}: Props) {
   const router = useRouter();
   const [ahora, setAhora] = useState(() => Date.now());
   const [error, setError] = useState<string | null>(null);
   const [config, setConfig] = useState(false);
+  const [reservaAbierta, setReservaAbierta] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   // El reloj corre acá: el servidor manda la hora de corte y cada pantalla
@@ -117,6 +157,11 @@ export function PoolBoard({ estado, tarifa, candidatas, isManager }: Props) {
         { event: "*", schema: "public", table: "pool_tables" },
         () => router.refresh(),
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "pool_reservations" },
+        () => router.refresh(),
+      )
       .subscribe();
 
     return () => {
@@ -135,6 +180,25 @@ export function PoolBoard({ estado, tarifa, candidatas, isManager }: Props) {
 
   const jugando = estado.filter((m) => m.session_id).length;
 
+  // Sólo los turnos pendientes, agrupados por mesa y en orden de hora. Los ya
+  // activados o liberados no son cola: se ven en el listado del día.
+  const reservasPorMesa = new Map<string, PoolReservation[]>();
+  for (const r of reservas) {
+    if (r.status !== "reservada") continue;
+    const lista = reservasPorMesa.get(r.table_id) ?? [];
+    lista.push(r);
+    reservasPorMesa.set(r.table_id, lista);
+  }
+  for (const lista of reservasPorMesa.values()) {
+    lista.sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
+  }
+  const pendientes = reservas.filter((r) => r.status === "reservada").length;
+
+  const mesasPool = estado.map((m) => ({
+    id: m.table_id,
+    number: m.table_number,
+  }));
+
   return (
     <main className="mx-auto max-w-6xl px-4 py-6">
       <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
@@ -149,6 +213,20 @@ export function PoolBoard({ estado, tarifa, candidatas, isManager }: Props) {
         </div>
 
         <div className="flex items-center gap-2">
+          {isManager ? (
+            <button
+              type="button"
+              onClick={() => setReservaAbierta((v) => !v)}
+              className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)]"
+            >
+              {reservaAbierta ? "Cerrar reserva" : "Reserva Pool"}
+              {pendientes > 0 && !reservaAbierta ? (
+                <span className="ml-1.5 rounded-full bg-[var(--color-accent)]/20 px-1.5 py-0.5 text-xs font-semibold text-[var(--color-accent)] tabular-nums">
+                  {pendientes}
+                </span>
+              ) : null}
+            </button>
+          ) : null}
           <Link
             href="/pool"
             target="_blank"
@@ -157,16 +235,34 @@ export function PoolBoard({ estado, tarifa, candidatas, isManager }: Props) {
             Pantalla del salón ↗
           </Link>
           {isManager ? (
-            <button
-              type="button"
-              onClick={() => setConfig((c) => !c)}
-              className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)]"
-            >
-              {config ? "Cerrar ajustes" : "Ajustes"}
-            </button>
+            <>
+              <Link
+                href="/admin/pool/reservas"
+                className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)]"
+              >
+                Reservas del día
+              </Link>
+              <button
+                type="button"
+                onClick={() => setConfig((c) => !c)}
+                className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)]"
+              >
+                {config ? "Cerrar ajustes" : "Ajustes"}
+              </button>
+            </>
           ) : null}
         </div>
       </header>
+
+      {reservaAbierta && isManager ? (
+        <PanelReserva
+          mesasPool={mesasPool}
+          reservas={reservas}
+          isPending={isPending}
+          onRun={run}
+          onListo={() => setReservaAbierta(false)}
+        />
+      ) : null}
 
       {error ? (
         <p
@@ -202,6 +298,8 @@ export function PoolBoard({ estado, tarifa, candidatas, isManager }: Props) {
                 key={mesa.session_id ?? "libre"}
                 mesa={mesa}
                 ahora={ahora}
+                reservas={reservasPorMesa.get(mesa.table_id) ?? []}
+                isManager={isManager}
                 isPending={isPending}
                 onRun={run}
               />
@@ -227,17 +325,22 @@ export function PoolBoard({ estado, tarifa, candidatas, isManager }: Props) {
 function MesaPool({
   mesa,
   ahora,
+  reservas,
+  isManager,
   isPending,
   onRun,
 }: {
   mesa: PoolStatus;
   ahora: number;
+  reservas: PoolReservation[];
+  isManager: boolean;
   isPending: boolean;
   onRun: (fn: () => Promise<{ error: string | null }>) => void;
 }) {
   const [otro, setOtro] = useState(false);
   const fase = faseDe(mesa, ahora);
   const restante = mesa.ends_at ? new Date(mesa.ends_at).getTime() - ahora : 0;
+  const mesaLibre = !mesa.session_id;
 
   // Un aparato que no saluda hace más de un minuto está caído. Preguntar cada
   // quince segundos y no aparecer en sesenta no es demora, es un problema.
@@ -433,6 +536,90 @@ function MesaPool({
         ) : null}
       </div>
 
+      {reservas.length > 0 ? (
+        <div className="mt-3 border-t border-[var(--color-border)] pt-2">
+          <p className="mb-1.5 text-xs font-medium text-[var(--color-muted)]">
+            Reservas
+            {mesaLibre ? (
+              <span className="ml-1.5 text-[var(--color-free)]">
+                · mesa libre, se puede activar
+              </span>
+            ) : (
+              <span className="ml-1.5">· esperan a que termine la partida</span>
+            )}
+          </p>
+          <ul className="grid gap-1.5">
+            {reservas.map((r) => {
+              const demora = demoraDe(r.scheduled_at, ahora);
+              return (
+                <li
+                  key={r.id}
+                  className="flex items-center gap-2 rounded-lg bg-[var(--color-surface-2)] px-2 py-1.5 text-sm"
+                >
+                  <span
+                    className={`tabular-nums ${DEMORA_TINTA[demora]}`}
+                    title={
+                      demora === "en-hora"
+                        ? "Turno reservado"
+                        : "El cliente ya debería haber llegado"
+                    }
+                  >
+                    {horaCorta(r.scheduled_at)}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">
+                    {r.customer_name}
+                    <span className="ml-1 text-xs text-[var(--color-muted)]">
+                      {poolMinutosATexto(r.play_minutes)}
+                    </span>
+                  </span>
+                  {isManager ? (
+                    <>
+                      <button
+                        type="button"
+                        disabled={isPending || !mesaLibre}
+                        title={
+                          mesaLibre
+                            ? "Arranca la partida con esta reserva"
+                            : "La mesa está ocupada"
+                        }
+                        onClick={() =>
+                          onRun(() => activatePoolReservation(r.id))
+                        }
+                        className="rounded-md bg-[var(--color-accent)] px-2 py-1 text-xs font-semibold text-[#04121c] disabled:opacity-40"
+                      >
+                        Activar
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isPending}
+                        title="Avisó que no viene o se canceló"
+                        onClick={() =>
+                          onRun(() => releasePoolReservation(r.id))
+                        }
+                        className="rounded-md border border-[var(--color-border)] px-2 py-1 text-xs text-[var(--color-muted)] transition-colors hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:opacity-40"
+                      >
+                        Liberar
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isPending}
+                        title="No vino ni avisó"
+                        onClick={() =>
+                          onRun(() => releasePoolReservation(r.id, true))
+                        }
+                        className="rounded-md border border-[var(--color-border)] px-2 py-1 text-xs text-[var(--color-muted)] transition-colors hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:opacity-40"
+                      >
+                        No vino
+                      </button>
+                    </>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : null}
+
       <footer
         className={`mt-3 border-t border-[var(--color-border)] pt-2 text-xs ${
           pañoVencido
@@ -609,6 +796,188 @@ function Ajustes({
         reinicia el contador. Quitar una mesa de pool no la borra del salón: le
         saca el aparato y su configuración, y conserva su historia.
       </p>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+
+/** Fecha y hora local en el formato que espera un input datetime-local. */
+function ahoraLocalInput(): string {
+  const d = new Date();
+  d.setSeconds(0, 0);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(
+    d.getHours(),
+  )}:${p(d.getMinutes())}`;
+}
+
+function PanelReserva({
+  mesasPool,
+  reservas,
+  isPending,
+  onRun,
+  onListo,
+}: {
+  mesasPool: { id: string; number: number }[];
+  reservas: PoolReservation[];
+  isPending: boolean;
+  onRun: (fn: () => Promise<{ error: string | null }>) => void;
+  onListo: () => void;
+}) {
+  const [tableId, setTableId] = useState(mesasPool[0]?.id ?? "");
+  const [minutes, setMinutes] = useState<number>(60);
+  const [cuando, setCuando] = useState(ahoraLocalInput);
+  const [tel, setTel] = useState("");
+  const telNorm = normalizarCelularUy(tel);
+  const telMal = tel.trim() !== "" && !telNorm;
+
+  // Aviso, no bloqueo: los clientes se atrasan y adelantan. Se marca si el
+  // turno nuevo pisa a otro vigente de la misma mesa.
+  const choque = useMemo(() => {
+    const ini = new Date(cuando).getTime();
+    if (Number.isNaN(ini)) return null;
+    const fin = ini + minutes * 60_000;
+    return (
+      reservas.find((r) => {
+        if (r.table_id !== tableId) return false;
+        if (r.status !== "reservada" && r.status !== "activada") return false;
+        const rIni = new Date(r.scheduled_at).getTime();
+        const rFin = rIni + r.play_minutes * 60_000;
+        return ini < rFin && rIni < fin;
+      }) ?? null
+    );
+  }, [reservas, tableId, cuando, minutes]);
+
+  if (mesasPool.length === 0) {
+    return (
+      <section className="mb-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 text-sm text-[var(--color-muted)]">
+        Primero configurá al menos una mesa de pool desde Ajustes.
+      </section>
+    );
+  }
+
+  return (
+    <section className="mb-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
+      <h2 className="text-lg font-medium">Reservar mesa de pool</h2>
+      <p className="mt-1 mb-4 text-sm text-[var(--color-muted)]">
+        Guarda el turno. No enciende la mesa: cuando llegue el cliente, activá la
+        reserva desde su mesa.
+      </p>
+
+      <form
+        action={(fd) => {
+          onRun(() =>
+            createPoolReservation({
+              tableId,
+              customerName: String(fd.get("customer") ?? ""),
+              phone: tel,
+              scheduledAt: cuando,
+              minutes,
+            }),
+          );
+          onListo();
+        }}
+        className="grid gap-3 sm:grid-cols-2"
+      >
+        <label className="grid gap-1">
+          <span className="text-xs text-[var(--color-muted)]">
+            Nombre del cliente
+          </span>
+          <input
+            name="customer"
+            required
+            autoFocus
+            className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+          />
+        </label>
+
+        <label className="grid gap-1">
+          <span className="text-xs text-[var(--color-muted)]">Celular</span>
+          <input
+            name="phone"
+            type="tel"
+            required
+            inputMode="tel"
+            placeholder="09X XXX XXX"
+            value={tel}
+            onChange={(e) => setTel(e.target.value)}
+            aria-invalid={telMal}
+            className={`rounded-lg border bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)] ${
+              telMal
+                ? "border-[var(--color-danger)]"
+                : "border-[var(--color-border)]"
+            }`}
+          />
+          {telMal ? (
+            <span className="text-xs text-[var(--color-danger)]">
+              Celular uruguayo: 09 y siete dígitos más.
+            </span>
+          ) : null}
+        </label>
+
+        <label className="grid gap-1">
+          <span className="text-xs text-[var(--color-muted)]">
+            Hora del turno
+          </span>
+          <input
+            type="datetime-local"
+            required
+            value={cuando}
+            onChange={(e) => setCuando(e.target.value)}
+            className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+          />
+        </label>
+
+        <label className="grid gap-1">
+          <span className="text-xs text-[var(--color-muted)]">
+            Horas de juego
+          </span>
+          <select
+            value={minutes}
+            onChange={(e) => setMinutes(Number(e.target.value))}
+            className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+          >
+            {POOL_RESERVA_BLOQUES.map((min) => (
+              <option key={min} value={min}>
+                {poolMinutosATexto(min)}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <label className="grid gap-1">
+          <span className="text-xs text-[var(--color-muted)]">Mesa de pool</span>
+          <select
+            value={tableId}
+            onChange={(e) => setTableId(e.target.value)}
+            className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+          >
+            {mesasPool.map((m) => (
+              <option key={m.id} value={m.id}>
+                Mesa {m.number}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <div className="flex items-end">
+          <button
+            type="submit"
+            disabled={isPending || !tableId || !telNorm}
+            className="w-full rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-[#04121c] disabled:opacity-50 sm:w-auto"
+          >
+            Guardar reserva
+          </button>
+        </div>
+      </form>
+
+      {choque ? (
+        <p className="mt-3 rounded-lg border border-[var(--color-busy)]/40 bg-[var(--color-busy)]/10 px-3 py-2 text-sm text-[var(--color-busy)]">
+          Ojo: se pisa con la reserva de {choque.customer_name} a las{" "}
+          {horaCorta(choque.scheduled_at)} en esa mesa. Se puede guardar igual.
+        </p>
+      ) : null}
     </section>
   );
 }

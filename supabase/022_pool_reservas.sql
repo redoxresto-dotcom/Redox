@@ -72,6 +72,22 @@ create table if not exists public.pool_reservations (
   created_at    timestamptz not null default now()
 );
 
+-- Los `check` de arriba solo corren al CREAR la tabla. Si esta migración ya se
+-- aplicó con una versión anterior, `create table if not exists` la saltea y las
+-- restricciones quedan viejas. Este bloque las deja al día en cualquier caso.
+alter table public.pool_reservations
+  drop constraint if exists pool_reservations_status_check,
+  add  constraint pool_reservations_status_check
+       check (status in
+         ('reservada', 'activada', 'liberada', 'no_show', 'vencida'));
+
+-- El del celular puede fallar si hay filas viejas con otro formato: normalizalas
+-- (09 + 7 dígitos) antes de volver a correr esto.
+alter table public.pool_reservations
+  drop constraint if exists pool_reservations_phone_check,
+  add  constraint pool_reservations_phone_check
+       check (phone ~ '^09[0-9]{7}$');
+
 -- Dos turnos vigentes con la misma mesa a la misma hora exacta es un error de
 -- carga. Solapamientos parciales NO se bloquean acá: los avisa la pantalla,
 -- porque en la práctica los clientes se atrasan y adelantan.

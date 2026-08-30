@@ -29,7 +29,7 @@ export default async function PoolPage() {
       .eq("is_pool_rate", true)
       .maybeSingle<{ id: string; name: string; price: number }>(),
     // Mesas del salón que todavía no son de pool: las candidatas a serlo.
-    supabase.from("tables").select("id, number").order("number"),
+    supabase.from("tables").select("id, number, name").order("number"),
     supabase.rpc("pool_day_reservations"),
   ]);
 
@@ -37,10 +37,10 @@ export default async function PoolPage() {
   const yaSonPool = new Set(estado.map((e) => e.table_id));
 
   const candidatas = (
-    (mesasRes.data ?? []) as Pick<BarTable, "id" | "number">[]
+    (mesasRes.data ?? []) as Pick<BarTable, "id" | "number" | "name">[]
   )
     .filter((t) => !yaSonPool.has(t.id))
-    .map((t) => ({ id: t.id, number: t.number }));
+    .map((t) => ({ id: t.id, number: t.number, name: t.name }));
 
   return (
     <PoolBoard

@@ -237,6 +237,8 @@ export function isPrepStation(value: string): value is "barra" | "cocina" {
 export type PoolStatus = {
   table_id: string;
   table_number: number;
+  /** Etiqueta opcional de la mesa ("Terraza", "Pool 1"). */
+  table_name: string | null;
   device_id: string;
   session_id: string | null;
   started_at: string | null;
@@ -271,6 +273,18 @@ export function poolMinutosATexto(minutos: number): string {
   return `${Math.floor(minutos / 60)} h ${minutos % 60} min`;
 }
 
+/**
+ * Cómo se nombra una mesa en pantalla: el nombre si tiene uno, y si no el
+ * número. El número sigue siendo el identificador; el nombre es la etiqueta.
+ */
+export function nombreMesa(
+  numero: number,
+  nombre: string | null | undefined,
+): string {
+  const limpio = nombre?.trim();
+  return limpio && limpio.length > 0 ? limpio : `Mesa ${numero}`;
+}
+
 /** Estados de una reserva de mesa de pool. */
 export type PoolReservationStatus =
   | "reservada"
@@ -289,6 +303,7 @@ export type PoolReservation = {
   id: string;
   table_id: string;
   table_number: number;
+  table_name: string | null;
   customer_name: string;
   phone: string;
   /** El turno: la "hora de reserva" que se muestra en la grilla del salón. */

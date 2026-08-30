@@ -23,6 +23,7 @@ import {
   normalizarCelularUy,
   POOL_BLOQUES,
   POOL_LECTOR_TIMEOUT_MS,
+  nombreMesa,
   POOL_RESERVA_BLOQUES,
   POOL_RESERVA_DEMORA_MINUTES,
   POOL_RESERVA_TARDE_MINUTES,
@@ -31,10 +32,12 @@ import {
   type PoolStatus,
 } from "@/lib/types";
 
+type MesaCandidata = { id: string; number: number; name: string | null };
+
 type Props = {
   estado: PoolStatus[];
   tarifa: { id: string; name: string; price: number } | null;
-  candidatas: { id: string; number: number }[];
+  candidatas: MesaCandidata[];
   reservas: PoolReservation[];
   isManager: boolean;
 };
@@ -196,7 +199,7 @@ export function PoolBoard({
 
   const mesasPool = estado.map((m) => ({
     id: m.table_id,
-    number: m.table_number,
+    label: nombreMesa(m.table_number, m.table_name),
   }));
 
   return (
@@ -360,7 +363,9 @@ function MesaPool({
       className={`flex h-full flex-col rounded-2xl border-2 p-4 transition-colors ${TONO[fase]}`}
     >
       <header className="flex items-baseline gap-2">
-        <h2 className="text-xl font-bold">Mesa {mesa.table_number}</h2>
+        <h2 className="text-xl font-bold">
+          {nombreMesa(mesa.table_number, mesa.table_name)}
+        </h2>
         <span
           title={
             lectorVivo
@@ -597,7 +602,7 @@ function ReservasPendientes({
           return (
             <div key={mesa.table_id} className="grid gap-1.5">
               <p className="text-xs font-semibold text-[var(--color-muted)]">
-                Mesa {mesa.table_number}
+                {nombreMesa(mesa.table_number, mesa.table_name)}
                 {libre ? (
                   <span className="ml-1.5 font-medium text-[var(--color-free)]">
                     · libre, se puede activar
@@ -693,7 +698,7 @@ function Ajustes({
   onRun,
 }: {
   estado: PoolStatus[];
-  candidatas: { id: string; number: number }[];
+  candidatas: MesaCandidata[];
   isPending: boolean;
   onRun: (fn: () => Promise<{ error: string | null }>) => void;
 }) {
@@ -730,7 +735,7 @@ function Ajustes({
             >
               {candidatas.map((t) => (
                 <option key={t.id} value={t.id}>
-                  Mesa {t.number}
+                  {nombreMesa(t.number, t.name)}
                 </option>
               ))}
             </select>
@@ -765,7 +770,7 @@ function Ajustes({
             className="flex flex-wrap items-end gap-3 border-t border-[var(--color-border)] pt-3"
           >
             <span className="min-w-20 font-medium">
-              Mesa {mesa.table_number}
+              {nombreMesa(mesa.table_number, mesa.table_name)}
             </span>
 
             <label className="grid gap-1">
@@ -869,7 +874,7 @@ function PanelReserva({
   onRun,
   onListo,
 }: {
-  mesasPool: { id: string; number: number }[];
+  mesasPool: { id: string; label: string }[];
   reservas: PoolReservation[];
   isPending: boolean;
   onRun: (fn: () => Promise<{ error: string | null }>) => void;
@@ -1005,7 +1010,7 @@ function PanelReserva({
           >
             {mesasPool.map((m) => (
               <option key={m.id} value={m.id}>
-                Mesa {m.number}
+                {m.label}
               </option>
             ))}
           </select>

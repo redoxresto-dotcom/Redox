@@ -6,7 +6,7 @@ import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { playBeep } from "@/lib/beep";
 import { expireDuePoolSessions } from "../admin/pool/actions";
 import { RedoxFlask } from "../_components/brand";
-import type { PoolReservation, PoolStatus } from "@/lib/types";
+import { nombreMesa, type PoolReservation, type PoolStatus } from "@/lib/types";
 
 type Fase = "libre" | "jugando" | "por-terminar" | "vencida";
 
@@ -198,7 +198,7 @@ export function PoolTv({
                   className={`flex min-h-64 flex-col items-center justify-center rounded-3xl border-4 p-8 text-center transition-colors ${borde}`}
                 >
                   <p className="text-xl font-bold tracking-[0.15em] text-[var(--color-muted)] uppercase">
-                    Mesa {mesa.table_number}
+                    {nombreMesa(mesa.table_number, mesa.table_name)}
                   </p>
 
                   {mesa.player_one || mesa.player_two ? (

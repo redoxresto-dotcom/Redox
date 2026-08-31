@@ -4,7 +4,14 @@ import { revalidatePath } from "next/cache";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin";
 import { requireManager } from "@/lib/auth";
-import { ROLE_RANK, STAFF_ROLES, type StaffRole } from "@/lib/types";
+import {
+  loginEmailFromDocumento,
+  ROLE_RANK,
+  STAFF_ROLES,
+  type StaffRole,
+} from "@/lib/types";
+
+const DOC_RE = /^\d{6,8}$/;
 
 export type UserResult = { error: string | null };
 
@@ -25,12 +32,14 @@ function esRol(valor: string): valor is StaffRole {
 export async function createStaff(formData: FormData): Promise<UserResult> {
   const yo = await requireManager();
 
-  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const document = String(formData.get("document") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const fullName = String(formData.get("full_name") ?? "").trim();
   const role = String(formData.get("role") ?? "mozo") as StaffRole;
 
-  if (!email.includes("@")) return { error: "El mail no parece válido." };
+  if (!DOC_RE.test(document)) {
+    return { error: "El documento tiene que ser de 6 a 8 dígitos, sin puntos." };
+  }
   if (password.length < 8) {
     return { error: "La contraseña tiene que tener al menos 8 caracteres." };
   }
@@ -44,18 +53,20 @@ export async function createStaff(formData: FormData): Promise<UserResult> {
   const admin = getSupabaseAdminClient();
 
   const { error } = await admin.auth.admin.createUser({
-    email,
+    // Supabase Auth necesita un email: se arma uno sintético a partir del
+    // documento. El usuario entra escribiendo solo el número.
+    email: loginEmailFromDocumento(document),
     password,
     // Sin esto Supabase manda un mail de confirmación y el mozo no puede entrar
     // hasta que lo abra. El alta la hace el gerente en el local.
     email_confirm: true,
-    user_metadata: { full_name: fullName, role },
+    user_metadata: { full_name: fullName, role, document },
   });
 
   if (error) {
     return {
       error: error.message.toLowerCase().includes("already")
-        ? "Ya hay un usuario con ese mail."
+        ? "Ya hay un usuario con ese documento."
         : "No se pudo crear el usuario: " + error.message,
     };
   }
@@ -201,6 +212,75 @@ export async function resetPassword(
   if (error) {
     return { error: "No se pudo cambiar la contraseña: " + error.message };
   }
+
+  revalidatePath("/admin/usuarios");
+  return OK;
+}
+
+/**
+ * Carga (o cambia) el documento con el que un usuario inicia sesión.
+ *
+ * Sirve para pasar a las cuentas viejas —creadas con un correo real— al login
+ * por documento: se les arma el email sintético y se guarda el número. Igual
+ * que el alta, toca Auth con service_role, así que la jerarquía se verifica
+ * acá.
+ */
+export async function setDocument(
+  userId: string,
+  formData: FormData
+): Promise<UserResult> {
+  const yo = await requireManager();
+
+  const document = String(formData.get("document") ?? "").trim();
+  if (!DOC_RE.test(document)) {
+    return { error: "El documento tiene que ser de 6 a 8 dígitos, sin puntos." };
+  }
+
+  const supabase = await getSupabaseServerClient();
+  const { data: objetivo } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", userId)
+    .maybeSingle<{ role: StaffRole }>();
+
+  if (!objetivo) return { error: "El usuario ya no existe." };
+  if (ROLE_RANK[objetivo.role] >= ROLE_RANK[yo.role]) {
+    return {
+      error: "Solo se puede cambiar el documento de alguien de nivel inferior al tuyo.",
+    };
+  }
+
+  const admin = getSupabaseAdminClient();
+
+  const { data: cuenta, error: readError } =
+    await admin.auth.admin.getUserById(userId);
+  if (readError || !cuenta.user) {
+    return { error: "No se pudo leer la cuenta: " + (readError?.message ?? "") };
+  }
+
+  const { error: authError } = await admin.auth.admin.updateUserById(userId, {
+    email: loginEmailFromDocumento(document),
+    // Auto-confirmado: el email es sintético y no puede recibir un mail de
+    // verificación. Sin esto, con "Secure email change" activo el cambio queda
+    // pendiente y el usuario no podría entrar con el documento.
+    email_confirm: true,
+    user_metadata: { ...cuenta.user.user_metadata, document },
+  });
+
+  if (authError) {
+    return {
+      error: authError.message.toLowerCase().includes("already")
+        ? "Ya hay un usuario con ese documento."
+        : "No se pudo cambiar el documento: " + authError.message,
+    };
+  }
+
+  const { error: profileError } = await supabase
+    .from("profiles")
+    .update({ document })
+    .eq("id", userId);
+
+  if (profileError) return { error: traducir(profileError.message) };
 
   revalidatePath("/admin/usuarios");
   return OK;

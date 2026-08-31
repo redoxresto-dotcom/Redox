@@ -3,7 +3,12 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
-import { homeFor, type StaffRole } from "@/lib/types";
+import {
+  esDocumento,
+  homeFor,
+  loginEmailFromDocumento,
+  type StaffRole,
+} from "@/lib/types";
 
 export type LoginState = { error: string | null };
 
@@ -20,12 +25,19 @@ export async function signIn(
   _prev: LoginState,
   formData: FormData,
 ): Promise<LoginState> {
-  const email = String(formData.get("email") ?? "").trim();
+  // El campo se llama "email" por compatibilidad, pero ahora lo normal es que
+  // traiga un documento. Un documento (6-8 dígitos) se convierte al email
+  // sintético; cualquier cosa con "@" se toma como el correo viejo.
+  const identificador = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
 
-  if (!email || !password) {
-    return { error: "Completá usuario y contraseña." };
+  if (!identificador || !password) {
+    return { error: "Completá documento y contraseña." };
   }
+
+  const email = esDocumento(identificador)
+    ? loginEmailFromDocumento(identificador)
+    : identificador;
 
   let supabase;
   try {

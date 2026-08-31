@@ -3,7 +3,7 @@ import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { AlertMonitor } from "./_components/alert-monitor";
 import { Sidebar } from "./_components/sidebar";
 import { redirect } from "next/navigation";
-import { stationOf, type Alert, type BarTable } from "@/lib/types";
+import { homeFor, stationOf, type Alert, type BarTable } from "@/lib/types";
 
 export default async function AdminLayout({
   children,
@@ -14,10 +14,9 @@ export default async function AdminLayout({
   // el usuario y su perfil contra la base.
   const profile = await requireStaff();
 
-  // La barra y la cocina no tienen nada que hacer en el panel: su trabajo son
-  // las comandas de todas las mesas. Vale para todo /admin, no solo el salón.
-  const station = stationOf(profile.role);
-  if (station) redirect(`/estacion/${station}`);
+  // La barra y la cocina no tienen nada que hacer en el panel: la cocina va a
+  // sus comandas y la barra a su pantalla de ventas. Vale para todo /admin.
+  if (stationOf(profile.role)) redirect(homeFor(profile.role));
 
   const supabase = await getSupabaseServerClient();
   const [alertsRes, tablesRes] = await Promise.all([

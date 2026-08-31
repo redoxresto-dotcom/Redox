@@ -3,6 +3,8 @@ import "server-only";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import {
   atiendeMesas,
+  comboVigente,
+  hoyMontevideo,
   type Alert,
   type AlertType,
   type BarTable,
@@ -75,8 +77,9 @@ export async function loadSalon(): Promise<SalonData> {
     ((poolRes.data ?? []) as { table_id: string }[]).map((p) => p.table_id),
   );
 
+  // Pool y barra tienen su propia pantalla: no van en el tablero del salón.
   const tables = ((tablesRes.data ?? []) as BarTable[]).filter(
-    (t) => !esDePool.has(t.id),
+    (t) => !esDePool.has(t.id) && !t.is_bar,
   );
   const orders = (ordersRes.data ?? []) as OrderWithItems[];
   const alerts = (alertsRes.data ?? []) as Alert[];
@@ -102,9 +105,15 @@ export async function loadSalon(): Promise<SalonData> {
     };
   });
 
+  // Un combo fuera de su ventana de vigencia no se ofrece en la mesa.
+  const hoy = hoyMontevideo();
+  const products = ((productsRes.data ?? []) as Product[]).filter(
+    (p) => !p.is_combo || comboVigente(p, hoy),
+  );
+
   return {
     tables: details,
-    products: (productsRes.data ?? []) as Product[],
+    products,
     waiters: Object.fromEntries(perfiles.map((p) => [p.id, p.full_name])),
     // La barra y la cocina no atienden mesas: pasarles una dejaría la cuenta a
     // nombre de alguien que no va a ir a buscarla.

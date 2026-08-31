@@ -30,15 +30,20 @@ export function LoginForm({ redirectTo }: { redirectTo: string | null }) {
       ) : null}
 
       <label className="grid gap-1.5">
-        <span className="text-sm text-[var(--color-muted)]">Correo</span>
+        <span className="text-sm text-[var(--color-muted)]">Documento</span>
         <input
           name="email"
-          type="email"
+          type="text"
+          inputMode="numeric"
           autoComplete="username"
           required
           autoFocus
+          placeholder="Número de documento"
           className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-3 outline-none focus:border-[var(--color-accent)]"
         />
+        <span className="text-xs text-[var(--color-muted)]">
+          Si todavía usás correo, también funciona.
+        </span>
       </label>
 
       <label className="grid gap-1.5">

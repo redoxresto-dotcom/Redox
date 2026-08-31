@@ -49,6 +49,7 @@ export default async function proxy(request: NextRequest) {
   const esPrivada =
     pathname.startsWith("/admin") ||
     pathname.startsWith("/estacion") ||
+    pathname.startsWith("/barra") ||
     pathname.startsWith("/pool");
 
   if (!user && esPrivada) {

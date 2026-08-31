@@ -7,6 +7,7 @@ import {
   deleteStaff,
   resetPassword,
   setActive,
+  setDocument,
 } from "./actions";
 import {
   assignableRoles,
@@ -29,6 +30,7 @@ export function UserManager({ profiles, me, emails }: Props) {
   const [creando, setCreando] = useState(false);
   const [confirmando, setConfirmando] = useState<string | null>(null);
   const [reseteando, setReseteando] = useState<string | null>(null);
+  const [documentando, setDocumentando] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -107,12 +109,14 @@ export function UserManager({ profiles, me, emails }: Props) {
           </label>
 
           <label className="grid gap-1">
-            <span className="text-xs text-[var(--color-muted)]">Mail</span>
+            <span className="text-xs text-[var(--color-muted)]">Documento</span>
             <input
-              name="email"
-              type="email"
+              name="document"
+              type="text"
+              inputMode="numeric"
               required
               autoComplete="off"
+              placeholder="6 a 8 dígitos"
               className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
             />
           </label>
@@ -167,7 +171,7 @@ export function UserManager({ profiles, me, emails }: Props) {
           <thead className="bg-[var(--color-surface)] text-left text-xs tracking-wide text-[var(--color-muted)] uppercase">
             <tr>
               <th className="px-4 py-2.5 font-medium">Nombre</th>
-              <th className="px-4 py-2.5 font-medium">Mail</th>
+              <th className="px-4 py-2.5 font-medium">Documento</th>
               <th className="px-4 py-2.5 font-medium">Nivel</th>
               <th className="px-4 py-2.5 font-medium">Estado</th>
               <th className="px-4 py-2.5" />
@@ -195,7 +199,73 @@ export function UserManager({ profiles, me, emails }: Props) {
                   </td>
 
                   <td className="px-4 py-3 text-[var(--color-muted)]">
-                    {emails[p.id] ?? "—"}
+                    {editable && documentando === p.id ? (
+                      <form
+                        action={(fd) =>
+                          run(
+                            () => setDocument(p.id, fd),
+                            () => {
+                              setDocumentando(null);
+                              setAviso(
+                                `Documento cargado para ${p.full_name}. Desde ahora entra con ese número.`
+                              );
+                            }
+                          )
+                        }
+                        className="flex items-center gap-1"
+                      >
+                        <input
+                          name="document"
+                          type="text"
+                          inputMode="numeric"
+                          required
+                          autoFocus
+                          autoComplete="off"
+                          placeholder="Documento"
+                          defaultValue={p.document ?? ""}
+                          className="w-32 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2 py-1 text-sm tabular-nums outline-none focus:border-[var(--color-accent)]"
+                        />
+                        <button
+                          type="submit"
+                          disabled={isPending}
+                          className="rounded-lg bg-[var(--color-accent)] px-2.5 py-1 text-xs font-semibold text-[#04121c] disabled:opacity-50"
+                        >
+                          Guardar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDocumentando(null)}
+                          className="rounded-lg px-2 py-1 text-[var(--color-muted)]"
+                        >
+                          ✕
+                        </button>
+                      </form>
+                    ) : (
+                      <div className="flex flex-col gap-0.5">
+                        <span className="tabular-nums">
+                          {p.document ?? "—"}
+                          {editable ? (
+                            <button
+                              type="button"
+                              disabled={isPending}
+                              onClick={() => {
+                                setDocumentando(p.id);
+                                setReseteando(null);
+                                setConfirmando(null);
+                                setError(null);
+                                setAviso(null);
+                              }}
+                              className="ml-2 text-xs text-[var(--color-muted)] underline transition-colors hover:text-[var(--color-ink)] disabled:opacity-50"
+                            >
+                              {p.document ? "cambiar" : "cargar"}
+                            </button>
+                          ) : null}
+                        </span>
+                        {!p.document && emails[p.id] ? (
+                          <span className="text-xs">{emails[p.id]}</span>
+                        ) : null}
+                      </div>
+                    )}
                   </td>
 
                   <td className="px-4 py-3">

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { requireAdmin, requireStaff } from "@/lib/auth";
-import { isPaymentMethod, type PaymentMethod } from "@/lib/types";
+import { comboVigente, isPaymentMethod, type PaymentMethod } from "@/lib/types";
 
 export type ActionResult = { error: string | null };
 
@@ -56,11 +56,15 @@ export async function addProductToTable(
 
   const { data: product, error: prodError } = await supabase
     .from("products")
-    .select("id, price, cost")
+    .select("id, price, cost, is_combo, combo_valid_from, combo_valid_until")
     .eq("id", productId)
     .single();
 
   if (prodError || !product) return { error: "Producto no encontrado." };
+
+  if (product.is_combo && !comboVigente(product)) {
+    return { error: "Ese combo está fuera de vigencia." };
+  }
 
   // Se suma sobre una línea existente solo si la estación todavía no la tomó.
   // Si el trago ya está en preparación o servido, la unidad nueva va en una

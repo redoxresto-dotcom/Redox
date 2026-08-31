@@ -215,12 +215,12 @@ export function PoolBoard({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {isManager ? (
             <button
               type="button"
               onClick={() => setReservaAbierta((v) => !v)}
-              className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)]"
+              className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm whitespace-nowrap text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)]"
             >
               {reservaAbierta ? "Cerrar reserva" : "Reserva Pool"}
               {pendientes > 0 && !reservaAbierta ? (
@@ -233,7 +233,7 @@ export function PoolBoard({
           <Link
             href="/pool"
             target="_blank"
-            className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)]"
+            className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm whitespace-nowrap text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)]"
           >
             Pantalla del salón ↗
           </Link>
@@ -241,14 +241,14 @@ export function PoolBoard({
             <>
               <Link
                 href="/admin/pool/reservas"
-                className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)]"
+                className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm whitespace-nowrap text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)]"
               >
                 Reservas del día
               </Link>
               <button
                 type="button"
                 onClick={() => setConfig((c) => !c)}
-                className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)]"
+                className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm whitespace-nowrap text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)]"
               >
                 {config ? "Cerrar ajustes" : "Ajustes"}
               </button>
@@ -363,7 +363,7 @@ function MesaPool({
       className={`flex h-full flex-col rounded-2xl border-2 p-4 transition-colors ${TONO[fase]}`}
     >
       <header className="flex items-baseline gap-2">
-        <h2 className="text-xl font-bold">
+        <h2 className="min-w-0 truncate text-xl font-bold">
           {nombreMesa(mesa.table_number, mesa.table_name)}
         </h2>
         <span
@@ -372,20 +372,22 @@ function MesaPool({
               ? "El aparato respondió recién"
               : "El aparato no responde: la mesa puede no estar habilitada"
           }
-          className={`ml-auto flex items-center gap-1.5 text-xs ${
+          className={`ml-auto flex shrink-0 items-center gap-1.5 text-xs ${
             lectorVivo
               ? "text-[var(--color-muted)]"
               : "font-medium text-[var(--color-danger)]"
           }`}
         >
           <span
-            className={`inline-block size-2 rounded-full ${
+            className={`inline-block size-2 shrink-0 rounded-full ${
               lectorVivo
                 ? "bg-[var(--color-free)]"
                 : "animate-pulse bg-[var(--color-danger)]"
             }`}
           />
-          {lectorVivo ? mesa.device_id : "sin señal"}
+          <span className="max-w-[9rem] truncate">
+            {lectorVivo ? mesa.device_id : "sin señal"}
+          </span>
         </span>
       </header>
 
@@ -630,14 +632,14 @@ function ReservasPendientes({
                       >
                         {horaCorta(r.scheduled_at)}
                       </span>
-                      <span className="min-w-0 flex-1 truncate">
+                      <span className="min-w-0 flex-1 basis-32 truncate">
                         {r.customer_name}
                         <span className="ml-1.5 text-xs text-[var(--color-muted)]">
                           {poolMinutosATexto(r.play_minutes)}
                         </span>
                       </span>
                       {isManager ? (
-                        <div className="flex shrink-0 gap-1.5">
+                        <div className="flex w-full shrink-0 flex-wrap justify-end gap-1.5 sm:w-auto">
                           <button
                             type="button"
                             disabled={isPending || !libre}
@@ -829,7 +831,7 @@ function Ajustes({
                   ),
                 )
               }
-              className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted)] transition-colors hover:border-[var(--color-free)] hover:text-[var(--color-free)] disabled:opacity-50"
+              className="w-full rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted)] transition-colors hover:border-[var(--color-free)] hover:text-[var(--color-free)] disabled:opacity-50 sm:w-auto"
             >
               Registrar cambio de paño
             </button>
@@ -838,7 +840,7 @@ function Ajustes({
               type="button"
               disabled={isPending}
               onClick={() => onRun(() => removePoolTable(mesa.table_id))}
-              className="ml-auto rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted)] transition-colors hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:opacity-50"
+              className="w-full rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted)] transition-colors hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:opacity-50 sm:ml-auto sm:w-auto"
             >
               Quitar
             </button>

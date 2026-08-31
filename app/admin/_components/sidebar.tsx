@@ -48,11 +48,14 @@ function itemsFor(role: StaffRole): NavItem[] {
     { href: "/estacion/cocina", label: "Cocina", icon: IconCocina },
     { href: "/admin/catalogo", label: "Catálogo", icon: IconCatalogo },
     { href: "/admin/salon", label: "Plano", icon: IconPlano },
-    { href: "/admin/reportes", label: "Reportes", icon: IconReportes },
   );
 
   if (hasRank(role, "gerente")) {
-    items.push({ href: "/admin/usuarios", label: "Usuarios", icon: IconUsuarios });
+    // La facturación es del gerente: el admin opera el salón pero no ve las ventas.
+    items.push(
+      { href: "/admin/reportes", label: "Reportes", icon: IconReportes },
+      { href: "/admin/usuarios", label: "Usuarios", icon: IconUsuarios },
+    );
   }
 
   items.push({ href: "/admin/qr", label: "QR", icon: IconQR });

@@ -163,7 +163,7 @@ export function PoolTv({
           No hay mesas de pool configuradas.
         </p>
       ) : (
-        <ul className="grid flex-1 grid-cols-[repeat(auto-fit,minmax(20rem,1fr))] content-center gap-6">
+        <ul className="grid flex-1 grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] content-center gap-6">
           {estado.map((mesa) => {
             const fase = faseDe(mesa, ahora);
             const restante = mesa.ends_at
@@ -193,7 +193,7 @@ export function PoolTv({
             const restantes = cola.length - visibles.length;
 
             return (
-              <li key={mesa.table_id} className="flex flex-col gap-3">
+              <li key={mesa.table_id} className="flex min-w-0 flex-col gap-3">
                 <article
                   className={`flex min-h-64 flex-col items-center justify-center rounded-3xl border-4 p-8 text-center transition-colors ${borde}`}
                 >

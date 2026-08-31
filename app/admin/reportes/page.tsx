@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/lib/auth";
+import { requireManager } from "@/lib/auth";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import {
   getCancelled,
@@ -30,8 +30,8 @@ export default async function ReportesPage({
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
-  // Los reportes son del encargado: un mozo ve su salón, no la facturación.
-  await requireAdmin();
+  // Los reportes son del gerente: ni el mozo ni el admin ven la facturación.
+  await requireManager();
 
   const params = await searchParams;
   const range = parseRange(params);

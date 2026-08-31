@@ -26,6 +26,8 @@ function parseForm(formData: FormData):
         description: string | null;
         in_menu: boolean;
         is_combo: boolean;
+        combo_valid_from: string | null;
+        combo_valid_until: string | null;
       };
       comboItems: { product_id: string; quantity: number }[];
     }
@@ -39,6 +41,25 @@ function parseForm(formData: FormData):
   // Checkbox sin marcar no viaja en el formulario.
   const in_menu = formData.get("in_menu") !== null;
   const is_combo = formData.get("is_combo") !== null;
+
+  // Vigencia: solo tiene sentido en combos. Fuera de un combo se guarda null
+  // para no arrastrar fechas de cuando el producto sí lo era.
+  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  const rawFrom = String(formData.get("combo_valid_from") ?? "").trim();
+  const rawUntil = String(formData.get("combo_valid_until") ?? "").trim();
+  const combo_valid_from = is_combo && DATE_RE.test(rawFrom) ? rawFrom : null;
+  const combo_valid_until = is_combo && DATE_RE.test(rawUntil) ? rawUntil : null;
+
+  if (
+    combo_valid_from &&
+    combo_valid_until &&
+    combo_valid_from > combo_valid_until
+  ) {
+    return {
+      ok: false,
+      error: "La fecha de inicio de la promoción es posterior a la de fin.",
+    };
+  }
 
   if (!name) return { ok: false, error: "El nombre no puede estar vacío." };
   if (!Number.isFinite(price) || price < 0)
@@ -92,6 +113,8 @@ function parseForm(formData: FormData):
       description: description || null,
       in_menu,
       is_combo,
+      combo_valid_from,
+      combo_valid_until,
     },
     comboItems,
   };

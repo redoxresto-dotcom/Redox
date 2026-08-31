@@ -9,7 +9,10 @@ import {
 } from "./actions";
 import {
   CATEGORY_LABELS,
+  comboUltimoDia,
+  comboVigente,
   formatMoney,
+  hoyMontevideo,
   STATION_LABELS,
   type ComboComponent,
   type Product,
@@ -39,6 +42,8 @@ export function CatalogManager({
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [isPending, startTransition] = useTransition();
+
+  const hoy = hoyMontevideo();
 
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -186,6 +191,15 @@ export function CatalogManager({
                           {product.is_combo ? (
                             <span className="ml-2 rounded bg-[var(--color-accent)]/15 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-[var(--color-accent)] uppercase">
                               combo
+                            </span>
+                          ) : null}
+                          {comboUltimoDia(product, hoy) ? (
+                            <span className="ml-2 rounded bg-[var(--color-busy)]/15 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-[var(--color-busy)] uppercase">
+                              último día
+                            </span>
+                          ) : product.is_combo && !comboVigente(product, hoy) ? (
+                            <span className="ml-2 rounded bg-[var(--color-surface-2)] px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-[var(--color-muted)] uppercase">
+                              vencido
                             </span>
                           ) : null}
                           {!product.active ? (
@@ -559,6 +573,35 @@ function ProductForm({
       {isCombo ? (
         <div className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3">
           <input type="hidden" name="combo_items" value={JSON.stringify(items)} />
+
+          <div className="mb-3 grid gap-2 sm:grid-cols-2">
+            <label className="grid gap-1">
+              <span className="text-xs text-[var(--color-muted)]">
+                Vigente desde (opcional)
+              </span>
+              <input
+                type="date"
+                name="combo_valid_from"
+                defaultValue={product?.combo_valid_from ?? ""}
+                className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+              />
+            </label>
+            <label className="grid gap-1">
+              <span className="text-xs text-[var(--color-muted)]">
+                Vigente hasta (opcional)
+              </span>
+              <input
+                type="date"
+                name="combo_valid_until"
+                defaultValue={product?.combo_valid_until ?? ""}
+                className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+              />
+            </label>
+            <p className="text-xs text-[var(--color-muted)] sm:col-span-2">
+              Fuera de esas fechas el combo no se ofrece en la mesa ni en la
+              carta. El último día aparece un aviso en el tablero.
+            </p>
+          </div>
 
           <p className="mb-2 text-xs text-[var(--color-muted)]">
             Qué productos incluye. El precio de venta de arriba es el que paga

@@ -25,6 +25,8 @@ export type Profile = {
   full_name: string;
   role: StaffRole;
   active: boolean;
+  /** Documento (C.I.) con el que inicia sesión. null en cuentas viejas por mail. */
+  document: string | null;
   created_at: string;
 };
 
@@ -40,11 +42,43 @@ export type Product = {
   in_menu: boolean;
   /** Combo o promoción: un producto que agrupa a otros con un precio propio. */
   is_combo: boolean;
+  /**
+   * Vigencia de la promoción (solo tiene sentido en combos). Fechas `YYYY-MM-DD`
+   * en hora de Montevideo. `null` = sin límite por ese lado. Fuera de la
+   * ventana, el combo no se ofrece en el POS ni en la carta.
+   */
+  combo_valid_from: string | null;
+  combo_valid_until: string | null;
   /** URL pública de la foto en Storage, o null si no tiene. */
   image_url: string | null;
   active: boolean;
   created_at: string;
 };
+
+/** Hoy en hora de Montevideo, en formato `YYYY-MM-DD`. */
+export function hoyMontevideo(): string {
+  return new Date().toLocaleDateString("en-CA", {
+    timeZone: "America/Montevideo",
+  });
+}
+
+/** ¿El combo está dentro de su ventana de vigencia hoy? */
+export function comboVigente(
+  p: Pick<Product, "combo_valid_from" | "combo_valid_until">,
+  hoy: string = hoyMontevideo(),
+): boolean {
+  if (p.combo_valid_from && p.combo_valid_from > hoy) return false;
+  if (p.combo_valid_until && p.combo_valid_until < hoy) return false;
+  return true;
+}
+
+/** ¿Hoy es el último día de vigencia del combo? (para la alerta) */
+export function comboUltimoDia(
+  p: Pick<Product, "is_combo" | "combo_valid_until">,
+  hoy: string = hoyMontevideo(),
+): boolean {
+  return p.is_combo && p.combo_valid_until === hoy;
+}
 
 /** Un producto dentro de un combo, con cuánto de él lleva. */
 export type ComboComponent = {
@@ -80,6 +114,11 @@ export type BarTable = {
   status: TableStatus;
   /** Etiqueta opcional además del número, p. ej. "Terraza" o "Barra 1". */
   name: string | null;
+  /**
+   * Mesa de barra: la atiende el usuario "barra" desde su pantalla de ventas.
+   * Queda fuera del tablero del salón, igual que las mesas de pool.
+   */
+  is_bar: boolean;
   /** id del perfil del mozo a cargo, o null si la mesa está libre. */
   assigned_waiter: string | null;
   /** Lugar en el plano del salón. */
@@ -402,8 +441,15 @@ export function atiendeMesas(role: StaffRole): boolean {
   return role === "mozo" || role === "admin" || role === "gerente";
 }
 
+/** Quiénes usan la pantalla de ventas de barra (bebidas, cobro, ticket). */
+export function atiendeBarra(role: StaffRole): boolean {
+  return role === "barra" || role === "admin" || role === "gerente";
+}
+
 /** A dónde entra cada uno al iniciar sesión. */
 export function homeFor(role: StaffRole): string {
+  // La barra vende desde su propia pantalla; la cocina entra a sus comandas.
+  if (role === "barra") return "/barra";
   const station = stationOf(role);
   if (station) return `/estacion/${station}`;
   return role === "mozo" ? "/admin/mis-mesas" : "/admin";
@@ -418,6 +464,45 @@ export function hasRank(role: StaffRole, min: StaffRole): boolean {
 export function assignableRoles(role: StaffRole): StaffRole[] {
   return STAFF_ROLES.filter((r) => ROLE_RANK[r] < ROLE_RANK[role]);
 }
+
+// ---------------------------------------------------------------------------
+//  Login por documento (C.I.)
+//
+//  Supabase Auth necesita un email. El personal entra con su documento y por
+//  detrás se arma un email sintético `<documento>@<dominio>`. Las cuentas
+//  viejas siguen entrando con su correo real mientras se migran.
+// ---------------------------------------------------------------------------
+
+/** Dominio del email sintético. Se puede fijar con AUTH_EMAIL_DOMAIN. */
+export const DOMINIO_LOGIN =
+  process.env.AUTH_EMAIL_DOMAIN?.trim() || "redox.local";
+
+/** ¿El texto tipeado es un documento (6 a 8 dígitos) y no un correo? */
+export function esDocumento(raw: string): boolean {
+  return /^\d{6,8}$/.test(raw.trim());
+}
+
+/** Documento → email interno con el que se autentica contra Supabase. */
+export function loginEmailFromDocumento(doc: string): string {
+  return `${doc.trim()}@${DOMINIO_LOGIN}`;
+}
+
+/**
+ * Datos de un comprobante de venta, en el orden en que se imprimen. Hoy se
+ * usan para el ticket de navegador; mañana, para el encoder ESC/POS.
+ */
+export type TicketData = {
+  /** Bloque 1 — emisor. */
+  emisor: { nombre: string; linea2?: string };
+  /** Bloque 2 — comprobante. */
+  comprobante: { numero: string; fecha: string; mesa: string; cajero: string };
+  /** Bloque 3 — detalle. */
+  lineas: { cantidad: number; descripcion: string; unitario: number; total: number }[];
+  /** Bloque 4 — totales. */
+  total: number;
+  /** Bloque 5 — pago. */
+  medioPago: PaymentMethod;
+};
 
 export const CATEGORY_LABELS: Record<ProductCategory, string> = {
   bebida: "Bebidas",

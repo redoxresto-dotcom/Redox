@@ -41,28 +41,10 @@ async function esMesaDeBarra(
   return Boolean(data?.is_bar);
 }
 
-/** Abre (o recupera) la cuenta de una mesa de barra. */
-export async function openBarTab(tableId: string): Promise<BarraResult> {
-  await requireBarra();
-  const supabase = await getSupabaseServerClient();
-
-  if (!(await esMesaDeBarra(supabase, tableId))) {
-    return { error: "Esa mesa no es de la barra." };
-  }
-
-  const { error } = await supabase.rpc("open_table_order", {
-    p_table_id: tableId,
-  });
-  if (error) return { error: "No se pudo abrir la mesa: " + error.message };
-
-  revalidar();
-  return OK;
-}
-
 /**
- * Carga una bebida a la mesa de barra. Solo productos de categoría bebida, y si
- * es un combo tiene que estar vigente. Si ya hay una línea de ese producto sin
- * tomar por la estación, suma una unidad ahí.
+ * Carga una bebida a la venta de barra. Abre la cuenta si hace falta. Solo
+ * productos de categoría bebida, y si es un combo tiene que estar vigente. Si
+ * ya hay una línea de ese producto sin tomar por la estación, suma ahí.
  */
 export async function addDrink(
   tableId: string,

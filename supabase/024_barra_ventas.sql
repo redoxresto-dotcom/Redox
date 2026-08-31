@@ -11,10 +11,15 @@
 --  entran a la caja general como cualquier otra (mismo `orders` / mismo RPC de
 --  cobro), así que el arqueo del día las toma sin cambios.
 --
---  Una "mesa de barra" es una mesa del salón marcada con is_bar. Queda fuera
---  del tablero del salón (igual que las de pool) y solo aparece en /barra.
+--  La barra vende directo desde el menú, sin elegir mesa. Por debajo la cuenta
+--  necesita igual una fila en `tables` (la FK de orders), así que existe una
+--  única mesa interna "Barra" marcada con is_bar. Queda fuera del tablero del
+--  salón (igual que las de pool) y solo la usa /barra.
 --  No hacen falta policies nuevas: orders / order_items / tables ya permiten
 --  todo al personal activo (is_staff()), y "barra" es personal.
+--
+--  (La siembra vive en 027_barra_mesa_unica.sql, que además se basta solo si
+--  esta migración no llegó a correr.)
 -- =============================================================================
 
 alter table public.tables
@@ -22,22 +27,3 @@ alter table public.tables
 
 create index if not exists tables_is_bar_idx
   on public.tables (is_bar) where is_bar;
-
--- Siembra un puñado de mesas de barra la primera vez. Si ya hay alguna (o el
--- dueño las creó a mano), no toca nada.
-do $$
-declare
-  v_base integer;
-begin
-  if not exists (select 1 from public.tables where is_bar) then
-    select coalesce(max(number), 0) into v_base from public.tables;
-
-    insert into public.tables (number, name, is_bar)
-    values
-      (v_base + 1, 'Barra 1', true),
-      (v_base + 2, 'Barra 2', true),
-      (v_base + 3, 'Barra 3', true),
-      (v_base + 4, 'Barra 4', true);
-  end if;
-end
-$$;

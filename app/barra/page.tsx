@@ -1,12 +1,13 @@
 import { requireStaff } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
-import { BarraBoard, type BarTab } from "./barra-board";
+import { BarraBoard } from "./barra-board";
 import {
   atiendeBarra,
   comboVigente,
   hoyMontevideo,
   homeFor,
+  nombreMesa,
   type BarTable,
   type Order,
   type OrderItemWithProduct,
@@ -23,12 +24,25 @@ export default async function BarraPage() {
 
   const supabase = await getSupabaseServerClient();
 
-  const [tablesRes, ordersRes, productsRes, shiftRes] = await Promise.all([
-    supabase.from("tables").select("*").eq("is_bar", true).order("number"),
-    supabase
-      .from("orders")
-      .select("*, order_items(*, product:products(id, name, category))")
-      .eq("status", "abierta"),
+  // Una única "mesa" interna sostiene la venta de barra (la FK de orders). Si
+  // hubiera más de una marcada, se usa la primera por número.
+  const { data: mesa } = await supabase
+    .from("tables")
+    .select("*")
+    .eq("is_bar", true)
+    .order("number")
+    .limit(1)
+    .maybeSingle<BarTable>();
+
+  const [ordersRes, productsRes, shiftRes] = await Promise.all([
+    mesa
+      ? supabase
+          .from("orders")
+          .select("*, order_items(*, product:products(id, name, category))")
+          .eq("table_id", mesa.id)
+          .eq("status", "abierta")
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
     supabase
       .from("products")
       .select("*")
@@ -42,22 +56,16 @@ export default async function BarraPage() {
       .maybeSingle(),
   ]);
 
-  const tables = (tablesRes.data ?? []) as BarTable[];
-  const orders = (ordersRes.data ?? []) as OrderWithItems[];
-  const ordersByTable = new Map(orders.map((o) => [o.table_id, o]));
-
-  const tabs: BarTab[] = tables.map((table) => {
-    const found = ordersByTable.get(table.id);
-    if (!found) return { table, order: null, items: [] };
-    const { order_items, ...order } = found;
-    return {
-      table,
-      order,
-      items: [...order_items].sort((a, b) =>
-        a.created_at.localeCompare(b.created_at),
-      ),
-    };
-  });
+  const found = (ordersRes.data ?? null) as OrderWithItems | null;
+  let order: Order | null = null;
+  let items: OrderItemWithProduct[] = [];
+  if (found) {
+    const { order_items, ...rest } = found;
+    order = rest;
+    items = [...order_items].sort((a, b) =>
+      a.created_at.localeCompare(b.created_at),
+    );
+  }
 
   const hoy = hoyMontevideo();
   const products = ((productsRes.data ?? []) as Product[]).filter(
@@ -66,7 +74,11 @@ export default async function BarraPage() {
 
   return (
     <BarraBoard
-      tabs={tabs}
+      mesa={
+        mesa ? { id: mesa.id, label: nombreMesa(mesa.number, mesa.name) } : null
+      }
+      order={order}
+      items={items}
       products={products}
       hasOpenShift={Boolean(shiftRes.data)}
       cajero={profile.full_name}

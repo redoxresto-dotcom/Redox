@@ -1,13 +1,23 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requireStaff } from "@/lib/auth";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
-import { PREP_STATIONS, STATION_LABELS, type Station } from "@/lib/types";
+import {
+  PREP_STATIONS,
+  STATION_LABELS,
+  stationOf,
+  type Station,
+} from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 /** Elegir pantalla. Se abre una vez por monitor y no se toca más. */
 export default async function EstacionesPage() {
-  await requireStaff();
+  const profile = await requireStaff();
+
+  // Barra y cocina tienen una sola estación: no eligen, van directo a la suya.
+  const propia = stationOf(profile.role);
+  if (propia) redirect(`/estacion/${propia}`);
 
   const supabase = await getSupabaseServerClient();
   const { data } = await supabase

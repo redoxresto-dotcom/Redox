@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireStaff } from "@/lib/auth";
 import { signOut } from "../login/actions";
 import { RedoxFlask } from "../_components/brand";
+import { stationOf } from "@/lib/types";
 
 /**
  * Chrome mínimo para las pantallas de estación.
@@ -18,22 +19,39 @@ export default async function EstacionLayout({
 }) {
   const profile = await requireStaff();
 
+  // Barra y cocina tienen una sola pantalla: no hay dónde navegar. Los links
+  // de estaciones y salón son solo para admin/gerente, que abren los monitores.
+  const soloSuPantalla = stationOf(profile.role) !== null;
+
   return (
     <div className="flex min-h-screen flex-col">
       <header className="flex items-center gap-3 border-b border-[var(--color-border)] px-4 py-2">
         <RedoxFlask size={20} />
-        <Link
-          href="/estacion"
-          className="text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)]"
-        >
-          Estaciones
-        </Link>
-        <Link
-          href="/admin"
-          className="text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)]"
-        >
-          Salón
-        </Link>
+        {soloSuPantalla ? (
+          profile.role === "barra" ? (
+            <Link
+              href="/barra"
+              className="text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)]"
+            >
+              ← Ventas
+            </Link>
+          ) : null
+        ) : (
+          <>
+            <Link
+              href="/estacion"
+              className="text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)]"
+            >
+              Estaciones
+            </Link>
+            <Link
+              href="/admin"
+              className="text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)]"
+            >
+              Salón
+            </Link>
+          </>
+        )}
         <span className="ml-auto text-sm text-[var(--color-muted)]">
           {profile.full_name}
         </span>

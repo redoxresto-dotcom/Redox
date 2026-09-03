@@ -1,27 +1,19 @@
 -- =============================================================================
 --  NexoRestUy — Redox, Punta Carretas
---  Migración 026: vigencia de combos
+--  Migración 029: repara la vista `menu` (foto + combo + vigencia)
 --
---  Ejecutar DESPUÉS de 025_login_documento.sql, en:
+--  Ejecutar DESPUÉS de 028_barra_open_table.sql, en:
 --    Supabase Dashboard → SQL Editor → New query → Run
 --  Es idempotente.
 --
---  Una promoción ahora puede tener fecha de inicio y de fin. Fuera de esa
---  ventana el combo no se ofrece: sale de la carta pública (esta vista) y el
---  POS lo filtra del mismo modo. El catálogo lo sigue mostrando, con un aviso
---  de "último día" y otro de "vencido", para poder reactivarlo cambiando la
---  fecha sin recrearlo.
+--  La migración 026 recreó `menu` copiando la forma vieja de la 008 y se comió
+--  las columnas image_url e is_combo que había agregado la 019. La carta del
+--  cliente (/table/[id]) las pide, así que quedaba sin cargar.
 --
---  Las fechas se comparan contra el día de Montevideo, igual que el resto de
---  los cortes por día del sistema.
+--  Esta vista es la definitiva: las 5 columnas de siempre + foto + combo, con
+--  el filtro de vigencia de combos de la 026 adentro.
 -- =============================================================================
 
-alter table public.products
-  add column if not exists combo_valid_from  date,
-  add column if not exists combo_valid_until date;
-
--- La vista pública de la carta (ver 008_carta.sql), ahora con el filtro de
--- vigencia adentro para que no dependa de que quien consulta se acuerde.
 drop view if exists public.menu;
 
 create view public.menu

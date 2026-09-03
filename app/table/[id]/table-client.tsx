@@ -153,7 +153,31 @@ export function TableClient({
           </p>
         ) : null}
 
-        <div className="mt-8 grid flex-1 content-center gap-4">
+        {menu.length > 0 ? (
+          <button
+            type="button"
+            onClick={() => setVerCarta(true)}
+            className="mt-8 flex w-full items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-4 text-left transition-colors active:bg-[var(--color-surface-2)]"
+          >
+            <span
+              aria-hidden
+              className="grid size-11 shrink-0 place-items-center rounded-xl bg-[var(--color-accent)]/15 text-2xl"
+            >
+              📖
+            </span>
+            <span className="flex-1">
+              <span className="block text-lg font-semibold">Ver la carta</span>
+              <span className="block text-sm text-[var(--color-muted)]">
+                Bebidas, comida y promos
+              </span>
+            </span>
+            <span aria-hidden className="text-xl text-[var(--color-muted)]">
+              →
+            </span>
+          </button>
+        ) : null}
+
+        <div className="mt-4 grid flex-1 content-center gap-4">
           {BUTTONS.map((button) => {
             const active = pending.includes(button.type);
             const busy = sendingType === button.type;
@@ -190,30 +214,6 @@ export function TableClient({
             );
           })}
         </div>
-
-        {menu.length > 0 ? (
-          <button
-            type="button"
-            onClick={() => setVerCarta(true)}
-            className="mt-4 flex w-full items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-4 text-left transition-colors active:bg-[var(--color-surface-2)]"
-          >
-            <span
-              aria-hidden
-              className="grid size-11 shrink-0 place-items-center rounded-xl bg-[var(--color-accent)]/15 text-2xl"
-            >
-              📖
-            </span>
-            <span className="flex-1">
-              <span className="block text-lg font-semibold">Ver la carta</span>
-              <span className="block text-sm text-[var(--color-muted)]">
-                Bebidas, comida y promos
-              </span>
-            </span>
-            <span aria-hidden className="text-xl text-[var(--color-muted)]">
-              →
-            </span>
-          </button>
-        ) : null}
 
         {verCarta ? (
           <Carta menu={menu} onClose={() => setVerCarta(false)} />

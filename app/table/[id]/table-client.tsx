@@ -153,31 +153,23 @@ export function TableClient({
           </p>
         ) : null}
 
-        {menu.length > 0 ? (
-          <button
-            type="button"
-            onClick={() => setVerCarta(true)}
-            className="mt-8 flex w-full items-center gap-3 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-4 text-left transition-colors active:bg-[var(--color-surface-2)]"
-          >
-            <span
-              aria-hidden
-              className="grid size-11 shrink-0 place-items-center rounded-xl bg-[var(--color-accent)]/15 text-2xl"
+        <div className="mt-8 grid flex-1 content-center gap-4">
+          {menu.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => setVerCarta(true)}
+              className="flex min-h-36 w-full flex-col items-center justify-center gap-2 rounded-3xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-8 transition-colors active:bg-[var(--color-surface-2)]"
             >
-              📖
-            </span>
-            <span className="flex-1">
-              <span className="block text-lg font-semibold">Ver la carta</span>
-              <span className="block text-sm text-[var(--color-muted)]">
+              <span aria-hidden className="text-4xl">
+                📖
+              </span>
+              <span className="text-xl font-semibold">Ver la carta</span>
+              <span className="text-sm text-[var(--color-muted)]">
                 Bebidas, comida y promos
               </span>
-            </span>
-            <span aria-hidden className="text-xl text-[var(--color-muted)]">
-              →
-            </span>
-          </button>
-        ) : null}
+            </button>
+          ) : null}
 
-        <div className="mt-4 grid flex-1 content-center gap-4">
           {BUTTONS.map((button) => {
             const active = pending.includes(button.type);
             const busy = sendingType === button.type;

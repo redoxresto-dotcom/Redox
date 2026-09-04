@@ -225,75 +225,100 @@ export function TableClient({
 
 const ORDEN_CATEGORIAS: ProductCategory[] = ["bebida", "comida", "otro"];
 
+/** Bajada de cada categoría en el selector. */
+const SUBTITULO_CATEGORIA: Record<ProductCategory, string> = {
+  bebida: "Opciones con y sin alcohol",
+  comida: "Sabores para compartir",
+  otro: "Más de la casa",
+};
+
+/** Ícono de cada categoría en el selector. */
+const EMOJI_CATEGORIA: Record<ProductCategory, string> = {
+  bebida: "🍸",
+  comida: "🍽️",
+  otro: "✦",
+};
+
+type Vista = ProductCategory | "promos";
+
 /**
  * La carta a pantalla completa.
  *
  * Se abre encima de los botones de llamado: quien abrió el QR para pedir la
  * cuenta tiene que seguir teniendo ese botón a un toque al cerrar.
  *
- * Estructura de menú digital: las promos arriba, después cada categoría con su
- * ancla, y una barra de secciones pegada que salta y sigue el scroll.
+ * Dos pasos: primero se elige una categoría, después se ve su lista de
+ * productos. Volver o cerrar con la ✕ o con Escape.
  */
 function Carta({ menu, onClose }: { menu: MenuItem[]; onClose: () => void }) {
+  const [vista, setVista] = useState<Vista | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
   const promos = menu.filter((i) => i.is_combo);
-  const secciones = ORDEN_CATEGORIAS.map((categoria) => ({
+  const grupos = ORDEN_CATEGORIAS.map((categoria) => ({
     categoria,
     items: menu.filter((i) => i.category === categoria && !i.is_combo),
-  })).filter((s) => s.items.length > 0);
+  })).filter((g) => g.items.length > 0);
 
-  const nav: { id: string; label: string }[] = [
-    ...(promos.length > 0 ? [{ id: "promos", label: "Promos" }] : []),
-    ...secciones.map((s) => ({
-      id: s.categoria,
-      label: CATEGORY_LABELS[s.categoria],
+  const categorias: {
+    id: Vista;
+    titulo: string;
+    sub: string;
+    emoji: string;
+    cuenta: number;
+  }[] = [
+    ...(promos.length > 0
+      ? [
+          {
+            id: "promos" as Vista,
+            titulo: "Promos",
+            sub: "Lo destacado de la casa",
+            emoji: "★",
+            cuenta: promos.length,
+          },
+        ]
+      : []),
+    ...grupos.map((g) => ({
+      id: g.categoria as Vista,
+      titulo: CATEGORY_LABELS[g.categoria],
+      sub: SUBTITULO_CATEGORIA[g.categoria],
+      emoji: EMOJI_CATEGORIA[g.categoria],
+      cuenta: g.items.length,
     })),
   ];
 
-  const [activo, setActivo] = useState(nav[0]?.id ?? "");
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const items =
+    vista === "promos"
+      ? promos
+      : vista
+        ? (grupos.find((g) => g.categoria === vista)?.items ?? [])
+        : [];
+  const tituloVista = categorias.find((c) => c.id === vista)?.titulo ?? "";
 
+  // Escape: primero vuelve al selector, después cierra la carta.
   useEffect(() => {
     function onEsc(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key !== "Escape") return;
+      if (vista) setVista(null);
+      else onClose();
     }
     window.addEventListener("keydown", onEsc);
+    return () => window.removeEventListener("keydown", onEsc);
+  }, [vista, onClose]);
 
-    // Sin esto, el fondo se sigue desplazando detrás de la carta en el celular.
+  // El fondo no se desplaza detrás de la carta mientras está abierta.
+  useEffect(() => {
     const previo = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-
     return () => {
-      window.removeEventListener("keydown", onEsc);
       document.body.style.overflow = previo;
     };
-  }, [onClose]);
+  }, []);
 
-  // La barra de secciones sigue lo que se está mirando.
+  // Al entrar o salir de una categoría, la lista arranca desde arriba.
   useEffect(() => {
-    const root = scrollRef.current;
-    if (!root) return;
-
-    const obs = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort(
-            (a, b) => a.boundingClientRect.top - b.boundingClientRect.top,
-          )[0];
-        const id = visible?.target.getAttribute("data-sec");
-        if (id) setActivo(id);
-      },
-      { root, rootMargin: "-15% 0px -75% 0px", threshold: 0 },
-    );
-
-    root.querySelectorAll("[data-sec]").forEach((el) => obs.observe(el));
-    return () => obs.disconnect();
-  }, [nav.length]);
-
-  function irA(id: string) {
-    const el = scrollRef.current?.querySelector<HTMLElement>(`#sec-${id}`);
-    el?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
+    scrollRef.current?.scrollTo({ top: 0 });
+  }, [vista]);
 
   return (
     <div
@@ -302,9 +327,32 @@ function Carta({ menu, onClose }: { menu: MenuItem[]; onClose: () => void }) {
       aria-label="Carta"
       className="fixed inset-0 z-50 flex flex-col bg-[var(--color-bg)]"
     >
-      <header className="flex items-center gap-3 border-b border-[var(--color-border)] px-5 py-4">
+      {/* La mascota, muy tenue, detrás de todo el menú. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-0 flex items-start justify-center overflow-hidden select-none"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/redox-mascota.png"
+          alt=""
+          className="mt-12 h-[72vh] w-auto opacity-[0.06]"
+        />
+      </div>
+
+      <header className="relative z-10 flex items-center gap-3 border-b border-[var(--color-border)] px-5 py-4">
         <RedoxFlask size={24} />
-        <h2 className="text-xl font-semibold">Carta</h2>
+        {vista ? (
+          <button
+            type="button"
+            onClick={() => setVista(null)}
+            className="flex items-center gap-1 text-sm font-medium text-[var(--color-brand-soft)]"
+          >
+            ‹ Categorías
+          </button>
+        ) : (
+          <h2 className="text-lg font-semibold">Carta</h2>
+        )}
         <button
           type="button"
           onClick={onClose}
@@ -315,161 +363,129 @@ function Carta({ menu, onClose }: { menu: MenuItem[]; onClose: () => void }) {
         </button>
       </header>
 
-      {nav.length > 1 ? (
-        <nav className="flex gap-2 overflow-x-auto border-b border-[var(--color-border)] px-5 py-2.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {nav.map((n) => (
-            <button
-              key={n.id}
-              type="button"
-              onClick={() => irA(n.id)}
-              className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
-                activo === n.id
-                  ? "bg-[var(--color-accent)] text-[#04121c]"
-                  : "bg-[var(--color-surface)] text-[var(--color-muted)] active:bg-[var(--color-surface-2)]"
-              }`}
-            >
-              {n.label}
-            </button>
-          ))}
-        </nav>
-      ) : null}
+      <div ref={scrollRef} className="relative z-10 flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-md px-5 py-6">
+          {vista === null ? (
+            <>
+              <p className="text-xs font-semibold tracking-[0.22em] text-[var(--color-brand-soft)] uppercase">
+                Elegí una categoría
+              </p>
+              <p className="mt-1 mb-5 text-sm text-[var(--color-muted)]">
+                Descubrí la experiencia Redox
+              </p>
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto">
-        <div className="mx-auto w-full max-w-md px-5 py-5">
-          {promos.length > 0 ? (
-            <section
-              id="sec-promos"
-              data-sec="promos"
-              className="mb-9 scroll-mt-4"
-            >
-              <TituloSeccion>Promos</TituloSeccion>
+              {categorias.length === 0 ? (
+                <p className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/80 px-4 py-10 text-center text-sm text-[var(--color-muted)]">
+                  La carta todavía no tiene productos cargados.
+                </p>
+              ) : (
+                <div className="grid gap-3">
+                  {categorias.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setVista(c.id)}
+                      className="flex items-center gap-4 rounded-2xl border border-[var(--color-brand)]/45 bg-[var(--color-surface)]/80 p-4 text-left backdrop-blur transition-colors active:bg-[var(--color-surface-2)]/80"
+                    >
+                      <span className="grid size-14 shrink-0 place-items-center rounded-full bg-[var(--color-free)] text-2xl">
+                        {c.emoji}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-xl font-bold tracking-wide uppercase">
+                          {c.titulo}
+                        </span>
+                        <span className="block text-sm text-[var(--color-muted)]">
+                          {c.sub}
+                        </span>
+                        <span className="mt-1 block text-xs font-semibold tracking-wide text-[var(--color-brand-soft)]">
+                          VER MENÚ ›
+                        </span>
+                      </span>
+                      <span
+                        aria-hidden
+                        className="text-2xl text-[var(--color-brand-soft)]"
+                      >
+                        ›
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <p className="text-xs font-semibold tracking-[0.22em] text-[var(--color-brand-soft)] uppercase">
+                Menú
+              </p>
+              <h3 className="mt-1 mb-4 text-2xl font-bold tracking-wide uppercase">
+                {tituloVista}
+              </h3>
+
               <div className="grid gap-3">
-                {promos.map((item) => (
-                  <PromoCard key={item.id} item={item} />
+                {items.map((item) => (
+                  <ProductoCard key={item.id} item={item} />
                 ))}
               </div>
-            </section>
-          ) : null}
+            </>
+          )}
 
-          {secciones.map((seccion) => (
-            <section
-              key={seccion.categoria}
-              id={`sec-${seccion.categoria}`}
-              data-sec={seccion.categoria}
-              className="mb-9 scroll-mt-4"
-            >
-              <TituloSeccion>{CATEGORY_LABELS[seccion.categoria]}</TituloSeccion>
-              <ul className="divide-y divide-[var(--color-border)]">
-                {seccion.items.map((item) => (
-                  <li key={item.id}>
-                    {item.image_url ? (
-                      <PlatoConFoto item={item} />
-                    ) : (
-                      <PlatoTexto item={item} />
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
-
-          <p className="pt-2 pb-8 text-center text-xs text-[var(--color-muted)]">
-            Los precios pueden cambiar. Consultá con el mozo por el pool.
-          </p>
+          <div className="mt-8 rounded-2xl border border-[var(--color-brand)]/40 px-5 py-4 text-center">
+            <p className="text-sm font-bold tracking-wide">
+              REDOX · SABOR CON ACTITUD
+            </p>
+            <p className="mt-0.5 text-xs text-[var(--color-brand-soft)]">
+              {vista === null
+                ? "Seleccioná una categoría para continuar"
+                : "Los precios pueden cambiar · consultá con el mozo por el pool"}
+            </p>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function TituloSeccion({ children }: { children: React.ReactNode }) {
+/** Tarjeta de producto: foto (o marco vacío), nombre, descripción y precio. */
+function ProductoCard({ item }: { item: MenuItem }) {
   return (
-    <div className="mb-3 flex items-center gap-3">
-      <h3 className="text-xs font-semibold tracking-[0.2em] text-[var(--color-accent)] uppercase">
-        {children}
-      </h3>
-      <span className="h-px flex-1 bg-[var(--color-border)]" />
-    </div>
-  );
-}
-
-/** Combo: tarjeta destacada, con foto de ancho completo si la tiene. */
-function PromoCard({ item }: { item: MenuItem }) {
-  return (
-    <article className="overflow-hidden rounded-2xl border border-[var(--color-accent)]/40 bg-[var(--color-accent)]/[0.06]">
+    <article className="flex gap-3 rounded-2xl border border-[var(--color-brand)]/40 bg-[var(--color-surface)]/80 p-3 backdrop-blur">
       {item.image_url ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={item.image_url}
           alt=""
           loading="lazy"
-          className="h-36 w-full object-cover"
+          className="size-24 shrink-0 rounded-xl border border-[var(--color-border)] object-cover"
         />
-      ) : null}
-      <div className="flex items-start gap-3 p-4">
-        <div className="min-w-0 flex-1">
-          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 leading-tight font-semibold">
-            {item.name}
-            <span className="rounded bg-[var(--color-accent)]/20 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-[var(--color-accent)] uppercase">
+      ) : (
+        <span
+          aria-hidden
+          className="grid size-24 shrink-0 place-items-center rounded-xl border border-dashed border-[var(--color-brand)]/40 text-2xl"
+        >
+          🧪
+        </span>
+      )}
+
+      <div className="flex min-w-0 flex-1 flex-col">
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 leading-tight font-bold tracking-wide uppercase">
+          {item.name}
+          {item.is_combo ? (
+            <span className="rounded bg-[var(--color-brand)]/25 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-[var(--color-brand-soft)] uppercase">
               combo
             </span>
-          </p>
-          {item.description ? (
-            <p className="mt-1 text-sm leading-snug text-[var(--color-muted)]">
-              {item.description}
-            </p>
           ) : null}
-        </div>
-        <span className="shrink-0 text-lg font-bold tabular-nums text-[var(--color-accent)]">
+        </p>
+
+        {item.description ? (
+          <p className="mt-1 line-clamp-2 text-sm leading-snug text-[var(--color-muted)]">
+            {item.description}
+          </p>
+        ) : null}
+
+        <span className="mt-3 self-end rounded-full bg-[var(--color-brand)] px-4 py-1.5 text-sm font-bold text-[var(--color-bg)] tabular-nums">
           {formatMoney(item.price)}
         </span>
       </div>
     </article>
-  );
-}
-
-/** Plato con foto: miniatura al costado. */
-function PlatoConFoto({ item }: { item: MenuItem }) {
-  return (
-    <div className="flex items-start gap-3 py-3.5">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={item.image_url ?? ""}
-        alt=""
-        loading="lazy"
-        className="size-20 shrink-0 rounded-xl border border-[var(--color-border)] object-cover"
-      />
-      <div className="min-w-0 flex-1">
-        <p className="leading-tight font-medium">{item.name}</p>
-        {item.description ? (
-          <p className="mt-0.5 line-clamp-2 text-sm leading-snug text-[var(--color-muted)]">
-            {item.description}
-          </p>
-        ) : null}
-      </div>
-      <span className="shrink-0 font-semibold tabular-nums">
-        {formatMoney(item.price)}
-      </span>
-    </div>
-  );
-}
-
-/** Plato sin foto: renglón de carta clásico, con guía de puntos hasta el precio. */
-function PlatoTexto({ item }: { item: MenuItem }) {
-  return (
-    <div className="py-3.5">
-      <div className="flex items-baseline gap-2">
-        <span className="font-medium">{item.name}</span>
-        <span className="mx-1 flex-1 -translate-y-0.5 border-b border-dotted border-[var(--color-border)]" />
-        <span className="shrink-0 font-semibold tabular-nums">
-          {formatMoney(item.price)}
-        </span>
-      </div>
-      {item.description ? (
-        <p className="mt-0.5 text-sm leading-snug text-[var(--color-muted)]">
-          {item.description}
-        </p>
-      ) : null}
-    </div>
   );
 }

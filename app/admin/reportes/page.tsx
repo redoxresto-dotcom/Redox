@@ -19,9 +19,11 @@ import {
   isPaymentMethod,
   PAYMENT_LABELS,
   STATION_LABELS,
+  type PaymentMethod,
   type Product,
   type Station,
 } from "@/lib/types";
+import { ImportVentas, type VentaManual } from "./import-ventas";
 
 export const dynamic = "force-dynamic";
 
@@ -61,6 +63,42 @@ export default async function ReportesPage({
     getCancelled(supabase, range),
   ]);
 
+  // Ventas cargadas a mano (corte de luz): entran a los cuadros de arriba por
+  // ser orders 'cobrada'; acá se listan aparte para poder revisarlas o borrarlas.
+  const [manualesRes, perfilesRes] = await Promise.all([
+    supabase
+      .from("orders")
+      .select("id, closed_at, total, payment_method, opened_by")
+      .eq("origin", "manual")
+      .eq("status", "cobrada")
+      .gte("closed_at", range.from)
+      .lt("closed_at", range.to)
+      .order("closed_at"),
+    supabase.from("profiles").select("id, full_name"),
+  ]);
+
+  const nombrePerfil = new Map(
+    ((perfilesRes.data ?? []) as { id: string; full_name: string }[]).map((p) => [
+      p.id,
+      p.full_name,
+    ]),
+  );
+  const manuales: VentaManual[] = (
+    (manualesRes.data ?? []) as {
+      id: string;
+      closed_at: string;
+      total: number;
+      payment_method: PaymentMethod | null;
+      opened_by: string | null;
+    }[]
+  ).map((o) => ({
+    id: o.id,
+    closed_at: o.closed_at,
+    total: o.total,
+    payment_method: o.payment_method,
+    mozo: o.opened_by ? (nombrePerfil.get(o.opened_by) ?? null) : null,
+  }));
+
   const vendidos = new Set(productos.map((p) => p.product_id));
   const sinVentas = ((catalogoRes.data ?? []) as Pick<Product, "id" | "name">[])
     .filter((p) => !vendidos.has(p.id))
@@ -80,6 +118,11 @@ export default async function ReportesPage({
           <h1 className="text-2xl font-semibold">Reportes</h1>
           <p className="text-sm text-[var(--color-muted)]">
             Ventas cobradas entre el {range.desde} y el {range.hasta}
+            {manuales.length > 0
+              ? ` · incluye ${manuales.length} venta${
+                  manuales.length === 1 ? "" : "s"
+                } cargada${manuales.length === 1 ? "" : "s"} a mano`
+              : ""}
           </p>
         </div>
 
@@ -111,7 +154,9 @@ export default async function ReportesPage({
         </form>
       </header>
 
-      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <ImportVentas manuales={manuales} />
+
+      <section className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Metric label="Vendido" value={formatMoney(Number(resumen.total))} />
         <Metric label="Tickets" value={String(resumen.tickets)} />
         <Metric

@@ -7,6 +7,7 @@ import {
   reactivateProduct,
   updateProduct,
 } from "./actions";
+import { ImportPanel } from "./import-panel";
 import {
   CATEGORY_LABELS,
   comboUltimoDia,
@@ -39,6 +40,7 @@ export function CatalogManager({
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -87,7 +89,20 @@ export function CatalogManager({
           <button
             type="button"
             onClick={() => {
+              setImporting((v) => !v);
+              setCreating(false);
+              setEditingId(null);
+              setError(null);
+            }}
+            className="rounded-lg border border-[var(--color-border)] px-4 py-2 text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)]"
+          >
+            {importing ? "Cerrar" : "Importar CSV"}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
               setCreating((c) => !c);
+              setImporting(false);
               setEditingId(null);
               setError(null);
             }}
@@ -97,6 +112,8 @@ export function CatalogManager({
           </button>
         </div>
       </header>
+
+      {importing ? <ImportPanel onDone={() => setImporting(false)} /> : null}
 
       {error ? (
         <p

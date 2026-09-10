@@ -77,9 +77,9 @@ export async function loadSalon(): Promise<SalonData> {
     ((poolRes.data ?? []) as { table_id: string }[]).map((p) => p.table_id),
   );
 
-  // Pool y barra tienen su propia pantalla: no van en el tablero del salón.
+  // Pool, barra y las mesas internas del sistema no van en el tablero del salón.
   const tables = ((tablesRes.data ?? []) as BarTable[]).filter(
-    (t) => !esDePool.has(t.id) && !t.is_bar,
+    (t) => !esDePool.has(t.id) && !t.is_bar && !t.is_system,
   );
   const orders = (ordersRes.data ?? []) as OrderWithItems[];
   const alerts = (alertsRes.data ?? []) as Alert[];

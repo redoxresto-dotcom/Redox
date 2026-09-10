@@ -119,6 +119,11 @@ export type BarTable = {
    * Queda fuera del tablero del salón, igual que las mesas de pool.
    */
   is_bar: boolean;
+  /**
+   * Mesa interna del sistema (p. ej. "Ventas sin conexión"): sostiene ventas
+   * que no ocurren en el salón. No aparece en el plano ni en los QR.
+   */
+  is_system: boolean;
   /** id del perfil del mozo a cargo, o null si la mesa está libre. */
   assigned_waiter: string | null;
   /** Lugar en el plano del salón. */

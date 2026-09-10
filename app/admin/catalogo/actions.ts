@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
+import { normalizarClave, parseCsv, parseNumeroLatam } from "@/lib/csv";
 import type { ProductCategory, Station } from "@/lib/types";
 
 export type CatalogResult = { error: string | null };
@@ -333,4 +334,254 @@ export async function reactivateProduct(id: string): Promise<CatalogResult> {
   revalidatePath("/admin/catalogo");
   revalidatePath("/admin");
   return { error: null };
+}
+
+// ---------------------------------------------------------------------------
+//  Importación masiva desde CSV
+// ---------------------------------------------------------------------------
+
+export type ImportResult = {
+  error: string | null;
+  creados: number;
+  actualizados: number;
+  omitidos: number;
+  /** Errores de validación: si hay alguno, no se insertó nada. */
+  errores: { fila: number; error: string }[];
+};
+
+/** Sinónimos que se aceptan en la columna `categoria`. */
+const CATEGORIA_SINONIMOS: Record<string, ProductCategory> = {
+  bebida: "bebida",
+  bebidas: "bebida",
+  trago: "bebida",
+  tragos: "bebida",
+  coctel: "bebida",
+  cocteles: "bebida",
+  comida: "comida",
+  comidas: "comida",
+  plato: "comida",
+  platos: "comida",
+  otro: "otro",
+  otros: "otro",
+  varios: "otro",
+};
+
+/** Sinónimos que se aceptan en la columna `estacion`. */
+const ESTACION_SINONIMOS: Record<string, Station> = {
+  barra: "barra",
+  bar: "barra",
+  cocina: "cocina",
+  ninguna: "ninguna",
+  ninguno: "ninguna",
+  nada: "ninguna",
+  no: "ninguna",
+  "sin comanda": "ninguna",
+  "sin estacion": "ninguna",
+};
+
+function parseBooleano(raw: string, porDefecto: boolean): boolean {
+  const v = normalizarClave(raw);
+  if (v === "") return porDefecto;
+  if (["si", "s", "1", "true", "verdadero", "x"].includes(v)) return true;
+  if (["no", "n", "0", "false", "falso"].includes(v)) return false;
+  return porDefecto;
+}
+
+type FilaProducto = {
+  name: string;
+  price: number;
+  cost: number;
+  category: ProductCategory;
+  station: Station;
+  description: string | null;
+  in_menu: boolean;
+  is_combo: boolean;
+};
+
+/**
+ * Alta de productos desde un CSV (Guardar como CSV UTF-8 desde Excel).
+ *
+ * Columnas: nombre*, precio*, categoria*, costo, estacion, descripcion,
+ * en_carta. Si alguna fila tiene un error, no se inserta nada: se devuelve la
+ * lista con el número de fila para corregir y volver a subir.
+ */
+export async function importProducts(formData: FormData): Promise<ImportResult> {
+  await requireAdmin();
+
+  const vacio: ImportResult = {
+    error: null,
+    creados: 0,
+    actualizados: 0,
+    omitidos: 0,
+    errores: [],
+  };
+
+  const file = formData.get("file");
+  const actualizar = formData.get("actualizar") != null;
+
+  if (!(file instanceof File) || file.size === 0) {
+    return { ...vacio, error: "Subí un archivo CSV." };
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    return { ...vacio, error: "El archivo es muy grande (máximo 2 MB)." };
+  }
+
+  const csv = parseCsv(await file.text());
+  for (const obligatoria of ["nombre", "precio", "categoria"]) {
+    if (!csv.headers.includes(obligatoria)) {
+      return {
+        ...vacio,
+        error:
+          "El archivo no tiene las columnas obligatorias: nombre, precio y categoria. Descargá la plantilla.",
+      };
+    }
+  }
+  if (csv.rows.length === 0) {
+    return { ...vacio, error: "El archivo no tiene filas de productos." };
+  }
+  if (csv.rows.length > 1000) {
+    return { ...vacio, error: "Máximo 1000 filas por archivo." };
+  }
+
+  const idx = (col: string) => csv.headers.indexOf(col);
+  const get = (fila: string[], col: string) =>
+    idx(col) === -1 ? "" : (fila[idx(col)] ?? "").trim();
+
+  const errores: { fila: number; error: string }[] = [];
+  const filas: FilaProducto[] = [];
+  const vistos = new Set<string>();
+
+  csv.rows.forEach((fila, i) => {
+    const nroFila = i + 2; // +1 encabezado, +1 base-1
+    const name = get(fila, "nombre");
+    if (!name) {
+      errores.push({ fila: nroFila, error: "Falta el nombre." });
+      return;
+    }
+    if (name.length > 120) {
+      errores.push({ fila: nroFila, error: "El nombre es demasiado largo." });
+      return;
+    }
+    const clave = name.toLowerCase();
+    if (vistos.has(clave)) {
+      errores.push({ fila: nroFila, error: `"${name}" está repetido en el archivo.` });
+      return;
+    }
+    vistos.add(clave);
+
+    const precio = parseNumeroLatam(get(fila, "precio"));
+    if (precio === null) {
+      errores.push({ fila: nroFila, error: "Falta el precio." });
+      return;
+    }
+    if (Number.isNaN(precio) || precio < 0) {
+      errores.push({ fila: nroFila, error: "El precio no es un número válido." });
+      return;
+    }
+
+    const costoRaw = parseNumeroLatam(get(fila, "costo"));
+    const cost = costoRaw === null ? 0 : costoRaw;
+    if (Number.isNaN(cost) || cost < 0) {
+      errores.push({ fila: nroFila, error: "El costo no es un número válido." });
+      return;
+    }
+
+    const category = CATEGORIA_SINONIMOS[normalizarClave(get(fila, "categoria"))];
+    if (!category) {
+      errores.push({
+        fila: nroFila,
+        error: "Categoría desconocida (usá bebida, comida u otro).",
+      });
+      return;
+    }
+
+    let station: Station = "barra";
+    const estacionRaw = normalizarClave(get(fila, "estacion"));
+    if (estacionRaw) {
+      const s = ESTACION_SINONIMOS[estacionRaw];
+      if (!s) {
+        errores.push({
+          fila: nroFila,
+          error: "Estación desconocida (usá barra, cocina o ninguna).",
+        });
+        return;
+      }
+      station = s;
+    }
+
+    const descripcion = get(fila, "descripcion");
+
+    filas.push({
+      name,
+      price: precio,
+      cost,
+      category,
+      station,
+      description: descripcion || null,
+      in_menu: parseBooleano(get(fila, "en_carta"), true),
+      is_combo: false,
+    });
+  });
+
+  if (errores.length > 0) {
+    return { ...vacio, errores };
+  }
+
+  const supabase = await getSupabaseServerClient();
+
+  const { data: existentesData, error: readError } = await supabase
+    .from("products")
+    .select("id, name");
+  if (readError) {
+    return { ...vacio, error: "No se pudo leer el catálogo: " + readError.message };
+  }
+  const porNombre = new Map(
+    (existentesData ?? []).map((p) => [p.name.toLowerCase(), p.id as string]),
+  );
+
+  const nuevos = filas.filter((f) => !porNombre.has(f.name.toLowerCase()));
+  const yaEstan = filas.filter((f) => porNombre.has(f.name.toLowerCase()));
+
+  let creados = 0;
+  if (nuevos.length > 0) {
+    const { error } = await supabase.from("products").insert(nuevos);
+    if (error) {
+      return { ...vacio, error: friendlyError(error.message) };
+    }
+    creados = nuevos.length;
+  }
+
+  let actualizados = 0;
+  if (actualizar) {
+    for (const f of yaEstan) {
+      const id = porNombre.get(f.name.toLowerCase())!;
+      const { error } = await supabase
+        .from("products")
+        .update({
+          price: f.price,
+          cost: f.cost,
+          category: f.category,
+          station: f.station,
+          description: f.description,
+          in_menu: f.in_menu,
+        })
+        .eq("id", id);
+      if (error) {
+        return { ...vacio, creados, actualizados, error: friendlyError(error.message) };
+      }
+      actualizados++;
+    }
+  }
+
+  revalidatePath("/admin/catalogo");
+  revalidatePath("/admin");
+  revalidatePath("/estacion", "layout");
+
+  return {
+    error: null,
+    creados,
+    actualizados,
+    omitidos: actualizar ? 0 : yaEstan.length,
+    errores: [],
+  };
 }

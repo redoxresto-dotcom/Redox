@@ -35,9 +35,13 @@ function hoyMontevideo(): string {
 }
 
 function hora(iso: string): string {
+  // Esta página se renderiza en el servidor (UTC): sin timeZone mostraba la
+  // hora corrida. El timestamp viaja en UTC y se muestra en hora de Montevideo.
   return new Date(iso).toLocaleTimeString("es-UY", {
+    timeZone: "America/Montevideo",
     hour: "2-digit",
     minute: "2-digit",
+    hour12: false,
   });
 }
 

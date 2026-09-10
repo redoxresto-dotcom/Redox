@@ -32,24 +32,12 @@ export async function callStaff(
   // La mesa tiene que existir; si el QR está mal, no creamos alertas huérfanas.
   const { data: table } = await supabase
     .from("tables")
-    .select("id, status")
+    .select("id")
     .eq("id", tableId)
     .maybeSingle();
 
   if (!table) {
     return { ok: false, alreadyPending: false, error: "Mesa no encontrada." };
-  }
-
-  // El QR queda impreso en la mesa para siempre; sin este chequeo, cualquiera
-  // con la URL —una foto vieja, un link reenviado— puede llamar al mozo a una
-  // mesa vacía. La RLS de `alerts` exige lo mismo del lado de la base: esto
-  // es solo para devolver un mensaje claro en vez de un error crudo.
-  if (table.status !== "ocupada") {
-    return {
-      ok: false,
-      alreadyPending: false,
-      error: "Esta mesa no está abierta. Pedile al mozo que te atienda.",
-    };
   }
 
   const { error } = await supabase

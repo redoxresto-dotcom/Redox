@@ -74,9 +74,13 @@ const TONO: Record<Fase, string> = {
 
 /** "14:30" — la hora del turno, que es lo que se lee de un vistazo. */
 function horaCorta(iso: string): string {
+  // Siempre en hora de Montevideo y 24 h: el timestamp viene en UTC y no puede
+  // depender del reloj del dispositivo ni de dónde corra el render.
   return new Date(iso).toLocaleTimeString("es-UY", {
+    timeZone: "America/Montevideo",
     hour: "2-digit",
     minute: "2-digit",
+    hour12: false,
   });
 }
 

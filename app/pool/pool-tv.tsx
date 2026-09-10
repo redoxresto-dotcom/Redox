@@ -34,11 +34,13 @@ const MENSAJE: Record<Fase, string> = {
   vencida: "Tiempo cumplido",
 };
 
-/** "14:30" — la hora del turno. */
+/** "14:30" — la hora del turno, siempre en hora de Montevideo y 24 h. */
 function horaCorta(iso: string): string {
   return new Date(iso).toLocaleTimeString("es-UY", {
+    timeZone: "America/Montevideo",
     hour: "2-digit",
     minute: "2-digit",
+    hour12: false,
   });
 }
 

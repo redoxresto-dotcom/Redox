@@ -241,6 +241,14 @@ const EMOJI_CATEGORIA: Record<ProductCategory, string> = {
 
 type Vista = ProductCategory | "promos";
 
+/** Sin tildes ni mayúsculas, para que "maracuya" encuentre "maracuyá". */
+function normalizar(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase();
+}
+
 /**
  * La carta a pantalla completa.
  *
@@ -248,10 +256,13 @@ type Vista = ProductCategory | "promos";
  * cuenta tiene que seguir teniendo ese botón a un toque al cerrar.
  *
  * Dos pasos: primero se elige una categoría, después se ve su lista de
- * productos. Volver o cerrar con la ✕ o con Escape.
+ * productos. Volver o cerrar con la ✕ o con Escape. El buscador, siempre a
+ * la vista, se salta los dos pasos: mientras hay texto, se ve un resultado
+ * plano de toda la carta sin importar la categoría.
  */
 function Carta({ menu, onClose }: { menu: MenuItem[]; onClose: () => void }) {
   const [vista, setVista] = useState<Vista | null>(null);
+  const [busqueda, setBusqueda] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const promos = menu.filter((i) => i.is_combo);
@@ -259,6 +270,16 @@ function Carta({ menu, onClose }: { menu: MenuItem[]; onClose: () => void }) {
     categoria,
     items: menu.filter((i) => i.category === categoria && !i.is_combo),
   })).filter((g) => g.items.length > 0);
+
+  const termino = normalizar(busqueda.trim());
+  const buscando = termino.length > 0;
+  const resultados = buscando
+    ? menu.filter(
+        (i) =>
+          normalizar(i.name).includes(termino) ||
+          (i.description && normalizar(i.description).includes(termino)),
+      )
+    : [];
 
   const categorias: {
     id: Vista;
@@ -295,16 +316,18 @@ function Carta({ menu, onClose }: { menu: MenuItem[]; onClose: () => void }) {
         : [];
   const tituloVista = categorias.find((c) => c.id === vista)?.titulo ?? "";
 
-  // Escape: primero vuelve al selector, después cierra la carta.
+  // Escape: primero borra la búsqueda, después vuelve al selector, después
+  // cierra la carta.
   useEffect(() => {
     function onEsc(e: KeyboardEvent) {
       if (e.key !== "Escape") return;
-      if (vista) setVista(null);
+      if (buscando) setBusqueda("");
+      else if (vista) setVista(null);
       else onClose();
     }
     window.addEventListener("keydown", onEsc);
     return () => window.removeEventListener("keydown", onEsc);
-  }, [vista, onClose]);
+  }, [buscando, vista, onClose]);
 
   // El fondo no se desplaza detrás de la carta mientras está abierta.
   useEffect(() => {
@@ -315,10 +338,10 @@ function Carta({ menu, onClose }: { menu: MenuItem[]; onClose: () => void }) {
     };
   }, []);
 
-  // Al entrar o salir de una categoría, la lista arranca desde arriba.
+  // Al entrar o salir de una categoría, o al buscar, la lista arranca desde arriba.
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0 });
-  }, [vista]);
+  }, [vista, buscando]);
 
   return (
     <div
@@ -342,7 +365,7 @@ function Carta({ menu, onClose }: { menu: MenuItem[]; onClose: () => void }) {
 
       <header className="relative z-10 flex items-center gap-3 border-b border-[var(--color-border)] px-5 py-4">
         <RedoxFlask size={24} />
-        {vista ? (
+        {vista && !buscando ? (
           <button
             type="button"
             onClick={() => setVista(null)}
@@ -363,9 +386,56 @@ function Carta({ menu, onClose }: { menu: MenuItem[]; onClose: () => void }) {
         </button>
       </header>
 
+      <div className="relative z-10 border-b border-[var(--color-border)] bg-[var(--color-bg)] px-5 py-3">
+        <div className="relative mx-auto w-full max-w-md">
+          <span
+            aria-hidden
+            className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-[var(--color-muted)]"
+          >
+            🔍
+          </span>
+          <input
+            type="search"
+            inputMode="search"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Buscar en la carta…"
+            aria-label="Buscar en la carta"
+            className="w-full rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] py-2.5 pr-4 pl-10 text-sm outline-none focus:border-[var(--color-brand)]"
+          />
+        </div>
+      </div>
+
       <div ref={scrollRef} className="relative z-10 flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-md px-5 py-6">
-          {vista === null ? (
+          {buscando ? (
+            <>
+              <p className="text-xs font-semibold tracking-[0.22em] text-[var(--color-brand-soft)] uppercase">
+                Resultados
+              </p>
+              <h3 className="mt-1 mb-4 text-2xl font-bold tracking-wide uppercase">
+                {resultados.length > 0
+                  ? `${resultados.length} coincidencia${resultados.length === 1 ? "" : "s"}`
+                  : "Buscar en la carta"}
+              </h3>
+
+              {resultados.length === 0 ? (
+                <p className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/80 px-4 py-10 text-center text-sm text-[var(--color-muted)]">
+                  No encontramos nada con "{busqueda.trim()}".
+                </p>
+              ) : (
+                <div className="grid gap-3">
+                  {resultados.map((item) => (
+                    <ProductoCard
+                      key={item.id}
+                      item={item}
+                      categoriaLabel={CATEGORY_LABELS[item.category]}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          ) : vista === null ? (
             <>
               <p className="text-xs font-semibold tracking-[0.22em] text-[var(--color-brand-soft)] uppercase">
                 Elegí una categoría
@@ -434,7 +504,7 @@ function Carta({ menu, onClose }: { menu: MenuItem[]; onClose: () => void }) {
               REDOX · SABOR CON ACTITUD
             </p>
             <p className="mt-0.5 text-xs text-[var(--color-brand-soft)]">
-              {vista === null
+              {!buscando && vista === null
                 ? "Seleccioná una categoría para continuar"
                 : "Los precios pueden cambiar · consultá con el mozo por el pool"}
             </p>
@@ -445,8 +515,20 @@ function Carta({ menu, onClose }: { menu: MenuItem[]; onClose: () => void }) {
   );
 }
 
-/** Tarjeta de producto: foto (o marco vacío), nombre, descripción y precio. */
-function ProductoCard({ item }: { item: MenuItem }) {
+/**
+ * Tarjeta de producto: foto (o marco vacío), nombre, descripción y precio.
+ *
+ * `categoriaLabel` solo se pasa en los resultados de búsqueda, donde los
+ * ítems vienen mezclados de varias categorías y hace falta aclarar de dónde
+ * es cada uno.
+ */
+function ProductoCard({
+  item,
+  categoriaLabel,
+}: {
+  item: MenuItem;
+  categoriaLabel?: string;
+}) {
   return (
     <article className="flex gap-3 rounded-2xl border border-[var(--color-brand)]/40 bg-[var(--color-surface)]/80 p-3 backdrop-blur">
       {item.image_url ? (
@@ -467,6 +549,11 @@ function ProductoCard({ item }: { item: MenuItem }) {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
+        {categoriaLabel ? (
+          <span className="mb-1 text-[10px] font-semibold tracking-wide text-[var(--color-brand-soft)] uppercase">
+            {categoriaLabel}
+          </span>
+        ) : null}
         <p className="flex flex-wrap items-center gap-x-2 gap-y-1 leading-tight font-bold tracking-wide uppercase">
           {item.name}
           {item.is_combo ? (

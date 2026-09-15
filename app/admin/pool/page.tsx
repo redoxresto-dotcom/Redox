@@ -21,22 +21,28 @@ export default async function PoolPage() {
     supabase.rpc("pool_reservations_expire_due"),
   ]);
 
-  const [estadoRes, tarifaRes, mesasRes, reservasRes] = await Promise.all([
-    supabase.rpc("pool_status"),
-    supabase
-      .from("products")
-      .select("id, name, price")
-      .eq("is_pool_rate", true)
-      .maybeSingle<{ id: string; name: string; price: number }>(),
-    // Mesas del salón que todavía no son de pool: las candidatas a serlo.
-    // Una dada de baja no es candidata: ya no está en operación.
-    supabase
-      .from("tables")
-      .select("id, number, name")
-      .eq("active", true)
-      .order("number"),
-    supabase.rpc("pool_day_reservations"),
-  ]);
+  const [estadoRes, tarifaRes, mesasRes, reservasRes, shiftRes] =
+    await Promise.all([
+      supabase.rpc("pool_status"),
+      supabase
+        .from("products")
+        .select("id, name, price")
+        .eq("is_pool_rate", true)
+        .maybeSingle<{ id: string; name: string; price: number }>(),
+      // Mesas del salón que todavía no son de pool: las candidatas a serlo.
+      // Una dada de baja no es candidata: ya no está en operación.
+      supabase
+        .from("tables")
+        .select("id, number, name")
+        .eq("active", true)
+        .order("number"),
+      supabase.rpc("pool_day_reservations"),
+      supabase
+        .from("cash_shifts")
+        .select("id")
+        .is("closed_at", null)
+        .maybeSingle(),
+    ]);
 
   const estado = (estadoRes.data ?? []) as PoolStatus[];
   const yaSonPool = new Set(estado.map((e) => e.table_id));
@@ -54,6 +60,7 @@ export default async function PoolPage() {
       candidatas={candidatas}
       reservas={(reservasRes.data ?? []) as PoolReservation[]}
       isManager={hasRank(profile.role, "admin")}
+      hasOpenShift={Boolean(shiftRes.data)}
     />
   );
 }

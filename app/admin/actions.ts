@@ -135,6 +135,7 @@ export async function closeOrder(
   }
 
   revalidatePath("/admin");
+  revalidatePath("/admin/pool");
   revalidatePath("/estacion", "layout");
   return OK;
 }

@@ -18,16 +18,20 @@ import {
   setPoolPlayers,
   updatePoolTable,
 } from "./actions";
+import { closeOrder } from "../actions";
 import {
   formatMoney,
   normalizarCelularUy,
   POOL_BLOQUES,
   POOL_LECTOR_TIMEOUT_MS,
   nombreMesa,
+  PAYMENT_LABELS,
+  PAYMENT_METHODS,
   POOL_RESERVA_BLOQUES,
   POOL_RESERVA_DEMORA_MINUTES,
   POOL_RESERVA_TARDE_MINUTES,
   poolMinutosATexto,
+  type PaymentMethod,
   type PoolReservation,
   type PoolStatus,
 } from "@/lib/types";
@@ -40,6 +44,7 @@ type Props = {
   candidatas: MesaCandidata[];
   reservas: PoolReservation[];
   isManager: boolean;
+  hasOpenShift: boolean;
 };
 
 type Fase = "libre" | "jugando" | "por-terminar" | "vencida";
@@ -108,6 +113,7 @@ export function PoolBoard({
   candidatas,
   reservas,
   isManager,
+  hasOpenShift,
 }: Props) {
   const router = useRouter();
   const [ahora, setAhora] = useState(() => Date.now());
@@ -309,6 +315,7 @@ export function PoolBoard({
                 ahora={ahora}
                 isPending={isPending}
                 onRun={run}
+                hasOpenShift={hasOpenShift}
               />
             </li>
           ))}
@@ -346,13 +353,16 @@ function MesaPool({
   ahora,
   isPending,
   onRun,
+  hasOpenShift,
 }: {
   mesa: PoolStatus;
   ahora: number;
   isPending: boolean;
   onRun: (fn: () => Promise<{ error: string | null }>) => void;
+  hasOpenShift: boolean;
 }) {
   const [otro, setOtro] = useState(false);
+  const [cobrando, setCobrando] = useState(false);
   const fase = faseDe(mesa, ahora);
   const restante = mesa.ends_at ? new Date(mesa.ends_at).getTime() - ahora : 0;
 
@@ -363,6 +373,16 @@ function MesaPool({
     ahora - new Date(mesa.last_seen_at).getTime() < POOL_LECTOR_TIMEOUT_MS;
 
   const pañoVencido = mesa.hours_played >= mesa.felt_threshold_hours;
+
+  function cobrar(method: PaymentMethod) {
+    const orderId = mesa.order_id;
+    if (!orderId) return;
+    onRun(async () => {
+      const result = await closeOrder(orderId, method);
+      if (!result.error) setCobrando(false);
+      return result;
+    });
+  }
 
   return (
     <article
@@ -545,12 +565,50 @@ function MesaPool({
         )}
 
         {mesa.order_id ? (
-          <Link
-            href="/admin"
-            className="rounded-lg bg-white/5 px-2 py-2 text-center text-sm text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-white/10 hover:text-[var(--color-ink)]"
-          >
-            Ver la cuenta y cobrar
-          </Link>
+          cobrando ? (
+            <div className="grid gap-1.5">
+              <p className="text-center text-xs text-[var(--color-muted)]">
+                {isPending ? "Cobrando…" : "¿Con qué paga?"}
+              </p>
+              <div className="grid grid-cols-2 gap-1.5">
+                {PAYMENT_METHODS.map((method) => (
+                  <button
+                    key={method}
+                    type="button"
+                    disabled={isPending}
+                    onClick={() => cobrar(method)}
+                    className={`rounded-lg px-2 py-2 text-xs font-semibold backdrop-blur-md disabled:opacity-50 ${
+                      method === "efectivo"
+                        ? "bg-[var(--color-free)] text-[#04140a]"
+                        : "bg-white/5 transition-colors hover:bg-white/10"
+                    }`}
+                  >
+                    {PAYMENT_LABELS[method]}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={() => setCobrando(false)}
+                className="rounded-lg px-2 py-1.5 text-xs text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)] disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+            </div>
+          ) : hasOpenShift ? (
+            <button
+              type="button"
+              onClick={() => setCobrando(true)}
+              className="rounded-lg bg-white/5 px-2 py-2 text-center text-sm text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-white/10 hover:text-[var(--color-ink)]"
+            >
+              Ver la cuenta y cobrar
+            </button>
+          ) : (
+            <p className="text-center text-xs text-[var(--color-busy)]">
+              Hay que abrir la caja antes de cobrar.
+            </p>
+          )
         ) : null}
       </div>
 

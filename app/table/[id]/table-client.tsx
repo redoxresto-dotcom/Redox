@@ -263,6 +263,7 @@ function normalizar(s: string): string {
 function Carta({ menu, onClose }: { menu: MenuItem[]; onClose: () => void }) {
   const [vista, setVista] = useState<Vista | null>(null);
   const [busqueda, setBusqueda] = useState("");
+  const [detalle, setDetalle] = useState<MenuItem | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const promos = menu.filter((i) => i.is_combo);
@@ -316,18 +317,19 @@ function Carta({ menu, onClose }: { menu: MenuItem[]; onClose: () => void }) {
         : [];
   const tituloVista = categorias.find((c) => c.id === vista)?.titulo ?? "";
 
-  // Escape: primero borra la búsqueda, después vuelve al selector, después
-  // cierra la carta.
+  // Escape: primero cierra el detalle, después borra la búsqueda, después
+  // vuelve al selector, después cierra la carta.
   useEffect(() => {
     function onEsc(e: KeyboardEvent) {
       if (e.key !== "Escape") return;
-      if (buscando) setBusqueda("");
+      if (detalle) setDetalle(null);
+      else if (buscando) setBusqueda("");
       else if (vista) setVista(null);
       else onClose();
     }
     window.addEventListener("keydown", onEsc);
     return () => window.removeEventListener("keydown", onEsc);
-  }, [buscando, vista, onClose]);
+  }, [detalle, buscando, vista, onClose]);
 
   // El fondo no se desplaza detrás de la carta mientras está abierta.
   useEffect(() => {
@@ -430,6 +432,7 @@ function Carta({ menu, onClose }: { menu: MenuItem[]; onClose: () => void }) {
                       key={item.id}
                       item={item}
                       categoriaLabel={CATEGORY_LABELS[item.category]}
+                      onAbrir={setDetalle}
                     />
                   ))}
                 </div>
@@ -443,6 +446,8 @@ function Carta({ menu, onClose }: { menu: MenuItem[]; onClose: () => void }) {
               <p className="mt-1 mb-5 text-sm text-[var(--color-muted)]">
                 Descubrí la experiencia Redox
               </p>
+
+              <PromosCarousel promos={promos} onAbrir={setDetalle} />
 
               {categorias.length === 0 ? (
                 <p className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/80 px-4 py-10 text-center text-sm text-[var(--color-muted)]">
@@ -493,7 +498,7 @@ function Carta({ menu, onClose }: { menu: MenuItem[]; onClose: () => void }) {
 
               <div className="grid gap-3">
                 {items.map((item) => (
-                  <ProductoCard key={item.id} item={item} />
+                  <ProductoCard key={item.id} item={item} onAbrir={setDetalle} />
                 ))}
               </div>
             </>
@@ -511,12 +516,150 @@ function Carta({ menu, onClose }: { menu: MenuItem[]; onClose: () => void }) {
           </div>
         </div>
       </div>
+
+      {detalle ? (
+        <DetalleProducto item={detalle} onClose={() => setDetalle(null)} />
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Franja horizontal con los combos y promociones vigentes, arriba del
+ * selector de categorías: es lo primero que ve el cliente al abrir la carta.
+ */
+function PromosCarousel({
+  promos,
+  onAbrir,
+}: {
+  promos: MenuItem[];
+  onAbrir: (item: MenuItem) => void;
+}) {
+  if (promos.length === 0) return null;
+
+  return (
+    <div className="mb-6">
+      <p className="mb-3 flex items-center gap-1.5 text-xs font-semibold tracking-[0.22em] text-[var(--color-brand-soft)] uppercase">
+        <span aria-hidden>★</span> Promos del día
+      </p>
+      <div className="-mx-5 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-1">
+        {promos.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => onAbrir(item)}
+            className="flex w-40 shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-[var(--color-brand)]/45 bg-[var(--color-surface)]/80 text-left backdrop-blur transition-transform active:scale-[0.97]"
+          >
+            {item.image_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={item.image_url}
+                alt=""
+                loading="lazy"
+                className="h-28 w-full object-cover"
+              />
+            ) : (
+              <span
+                aria-hidden
+                className="grid h-28 w-full place-items-center bg-[var(--color-surface-2)] text-2xl"
+              >
+                🧪
+              </span>
+            )}
+            <span className="flex flex-1 flex-col gap-1.5 px-3 py-2.5">
+              <span className="line-clamp-2 text-xs leading-tight font-bold tracking-wide uppercase">
+                {item.name}
+              </span>
+              <span className="mt-auto self-start rounded-full bg-[var(--color-brand)] px-2.5 py-1 text-[11px] font-bold text-[var(--color-bg)] tabular-nums">
+                {formatMoney(item.price)}
+              </span>
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Detalle a pantalla completa de un producto: foto grande, ingredientes y
+ * preparación. Se abre encima de la carta; la ✕ arriba a la derecha, sobre
+ * la foto, la cierra.
+ */
+function DetalleProducto({
+  item,
+  onClose,
+}: {
+  item: MenuItem;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={item.name}
+      className="fixed inset-0 z-[60] flex flex-col bg-[var(--color-bg)]"
+    >
+      <div className="flex-1 overflow-y-auto">
+        <div className="relative">
+          {item.image_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={item.image_url}
+              alt=""
+              className="h-72 w-full object-cover"
+            />
+          ) : (
+            <div className="grid h-72 w-full place-items-center bg-[var(--color-surface)] text-5xl">
+              🧪
+            </div>
+          )}
+          <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[var(--color-bg)] to-transparent" />
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar detalle"
+            className="absolute top-4 right-4 grid size-10 place-items-center rounded-full bg-[var(--color-bg)]/70 text-lg text-[var(--color-ink)] backdrop-blur active:bg-[var(--color-bg)]"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="mx-auto w-full max-w-md px-5 py-6">
+          <span className="text-xs font-semibold tracking-[0.22em] text-[var(--color-brand-soft)] uppercase">
+            {item.is_combo ? "Promo" : CATEGORY_LABELS[item.category]}
+          </span>
+          <h3 className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-2xl leading-tight font-bold tracking-wide uppercase">
+            {item.name}
+            {item.is_combo ? (
+              <span className="rounded bg-[var(--color-brand)]/25 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-[var(--color-brand-soft)] uppercase">
+                combo
+              </span>
+            ) : null}
+          </h3>
+
+          <span className="mt-3 inline-block rounded-full bg-[var(--color-brand)] px-4 py-1.5 text-sm font-bold text-[var(--color-bg)] tabular-nums">
+            {formatMoney(item.price)}
+          </span>
+
+          <div className="mt-6 border-t border-[var(--color-border)] pt-5">
+            <p className="text-xs font-semibold tracking-[0.22em] text-[var(--color-brand-soft)] uppercase">
+              Ingredientes y preparación
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-[var(--color-muted)]">
+              {item.description ??
+                "Consultá con el mozo por los detalles de este producto."}
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
 /**
  * Tarjeta de producto: foto (o marco vacío), nombre, descripción y precio.
+ * Se toca para expandirla a pantalla completa con más detalle.
  *
  * `categoriaLabel` solo se pasa en los resultados de búsqueda, donde los
  * ítems vienen mezclados de varias categorías y hace falta aclarar de dónde
@@ -525,12 +668,18 @@ function Carta({ menu, onClose }: { menu: MenuItem[]; onClose: () => void }) {
 function ProductoCard({
   item,
   categoriaLabel,
+  onAbrir,
 }: {
   item: MenuItem;
   categoriaLabel?: string;
+  onAbrir: (item: MenuItem) => void;
 }) {
   return (
-    <article className="flex gap-3 rounded-2xl border border-[var(--color-brand)]/40 bg-[var(--color-surface)]/80 p-3 backdrop-blur">
+    <button
+      type="button"
+      onClick={() => onAbrir(item)}
+      className="flex gap-3 rounded-2xl border border-[var(--color-brand)]/40 bg-[var(--color-surface)]/80 p-3 text-left backdrop-blur transition-transform active:scale-[0.98]"
+    >
       {item.image_url ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -554,25 +703,25 @@ function ProductoCard({
             {categoriaLabel}
           </span>
         ) : null}
-        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 leading-tight font-bold tracking-wide uppercase">
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-1 leading-tight font-bold tracking-wide uppercase">
           {item.name}
           {item.is_combo ? (
             <span className="rounded bg-[var(--color-brand)]/25 px-1.5 py-0.5 text-[10px] font-bold tracking-wide text-[var(--color-brand-soft)] uppercase">
               combo
             </span>
           ) : null}
-        </p>
+        </span>
 
         {item.description ? (
-          <p className="mt-1 line-clamp-2 text-sm leading-snug text-[var(--color-muted)]">
+          <span className="mt-1 line-clamp-2 text-sm leading-snug text-[var(--color-muted)]">
             {item.description}
-          </p>
+          </span>
         ) : null}
 
         <span className="mt-3 self-end rounded-full bg-[var(--color-brand)] px-4 py-1.5 text-sm font-bold text-[var(--color-bg)] tabular-nums">
           {formatMoney(item.price)}
         </span>
       </div>
-    </article>
+    </button>
   );
 }

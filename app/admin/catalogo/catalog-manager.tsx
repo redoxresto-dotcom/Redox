@@ -72,8 +72,10 @@ export function CatalogManager({
     <main className="mx-auto max-w-5xl px-4 py-6">
       <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">Catálogo</h1>
-          <p className="text-sm text-[var(--color-muted)]">
+          <h1 className="text-3xl font-black tracking-tight uppercase">
+            Catálogo
+          </h1>
+          <p className="text-xs font-medium tracking-[0.2em] text-[var(--color-muted)] uppercase">
             {activos.length} producto{activos.length === 1 ? "" : "s"} en venta ·
             margen promedio {margenPromedio.toFixed(0)}%
           </p>

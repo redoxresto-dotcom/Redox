@@ -96,10 +96,8 @@ export function AlertMonitor({ initialAlerts, tableNumbers }: Props) {
     <section
       aria-label="Alertas de las mesas"
       aria-live="polite"
-      className={`border-b transition-colors ${
-        hasAlerts
-          ? "border-[var(--color-busy)]/40 bg-[var(--color-busy)]/10"
-          : "border-[var(--color-border)] bg-[var(--color-surface)]/40"
+      className={`shadow-lg shadow-black/10 backdrop-blur-xl transition-colors ${
+        hasAlerts ? "bg-[var(--color-busy)]/10" : "bg-white/5"
       }`}
     >
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-4 py-2.5">
@@ -126,10 +124,10 @@ export function AlertMonitor({ initialAlerts, tableNumbers }: Props) {
                   onClick={() => handleResolve(alert.id)}
                   disabled={isPending}
                   title="Marcar como atendida"
-                  className={`group flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-colors disabled:opacity-50 ${
+                  className={`group flex items-center gap-2 rounded-full px-3 py-1.5 text-sm backdrop-blur-md transition-colors disabled:opacity-50 ${
                     alert.type === "pedir_cuenta"
-                      ? "border-[var(--color-accent)]/50 bg-[var(--color-accent)]/15 hover:bg-[var(--color-accent)]/25"
-                      : "border-[var(--color-busy)]/50 bg-[var(--color-busy)]/15 hover:bg-[var(--color-busy)]/25"
+                      ? "bg-[var(--color-accent)]/20 hover:bg-[var(--color-accent)]/30"
+                      : "bg-[var(--color-busy)]/20 hover:bg-[var(--color-busy)]/30"
                   }`}
                 >
                   <span className="font-semibold">

@@ -58,7 +58,7 @@ export default async function QrPage() {
           , así que si cambiás el dominio hay que reimprimirlos.
         </p>
         {!process.env.NEXT_PUBLIC_SITE_URL ? (
-          <p className="mt-3 rounded-lg border border-[var(--color-busy)]/40 bg-[var(--color-busy)]/10 px-3 py-2 text-sm text-[var(--color-busy)]">
+          <p className="mt-3 rounded-lg bg-[var(--color-busy)]/15 px-3 py-2 text-sm text-[var(--color-busy)] backdrop-blur-md">
             Ojo: <code>NEXT_PUBLIC_SITE_URL</code> no está configurada, así que
             estos QR usan la dirección desde la que abriste esta página. Antes de
             imprimir en serio, definila con el dominio final.

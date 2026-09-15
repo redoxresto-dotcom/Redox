@@ -134,7 +134,15 @@ export function PoolTv({
   }
 
   return (
-    <main className="flex min-h-screen flex-col p-6">
+    <main className="relative flex min-h-screen flex-col p-6">
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
+      >
+        <div className="absolute -top-32 -left-32 size-[28rem] rounded-full bg-[var(--color-brand)]/15 blur-[110px]" />
+        <div className="absolute right-0 bottom-0 size-[28rem] rounded-full bg-[var(--color-accent)]/10 blur-[110px]" />
+      </div>
+
       <header className="mb-6 flex items-center gap-3">
         <RedoxFlask size={34} />
         <h1 className="text-2xl font-semibold tracking-tight">Mesas de pool</h1>
@@ -154,7 +162,7 @@ export function PoolTv({
             else void document.documentElement.requestFullscreen();
           }}
           aria-label="Pantalla completa"
-          className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted)]"
+          className="rounded-lg bg-white/5 px-3 py-2 text-sm text-[var(--color-muted)] backdrop-blur-md"
         >
           ⛶
         </button>
@@ -172,14 +180,17 @@ export function PoolTv({
               ? new Date(mesa.ends_at).getTime() - ahora
               : 0;
 
+            // El borde grueso de color acá no es decoración: es la señal de
+            // estado que se lee desde el otro lado del salón. Se mantiene
+            // aunque el resto de la app pase a vidrio sin bordes.
             const borde =
               fase === "vencida"
-                ? "border-[var(--color-danger)] bg-[var(--color-danger)]/15 animate-pulse"
+                ? "border-[var(--color-danger)] bg-[var(--color-danger)]/15 backdrop-blur-xl animate-pulse"
                 : fase === "por-terminar"
-                  ? "border-[var(--color-busy)] bg-[var(--color-busy)]/10 animate-pulse"
+                  ? "border-[var(--color-busy)] bg-[var(--color-busy)]/10 backdrop-blur-xl animate-pulse"
                   : fase === "jugando"
-                    ? "border-[var(--color-free)]/60 bg-[var(--color-free)]/5"
-                    : "border-[var(--color-border)] bg-[var(--color-surface)]";
+                    ? "border-[var(--color-free)]/60 bg-[var(--color-free)]/5 backdrop-blur-xl"
+                    : "border-transparent bg-white/5 backdrop-blur-xl";
 
             const tinta =
               fase === "vencida"
@@ -229,7 +240,7 @@ export function PoolTv({
                 </article>
 
                 {visibles.length > 0 ? (
-                  <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
+                  <div className="rounded-2xl bg-white/5 p-3 backdrop-blur-xl">
                     <div className="grid grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-2 text-sm">
                       <span className="text-xs font-semibold tracking-[0.12em] text-[var(--color-muted)] uppercase">
                         Reservada

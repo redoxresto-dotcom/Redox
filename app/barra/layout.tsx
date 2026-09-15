@@ -17,8 +17,16 @@ export default async function BarraLayout({
   if (!atiendeBarra(profile.role)) redirect(homeFor(profile.role));
 
   return (
-    <div className="flex min-h-[100dvh] flex-col">
-      <header className="sticky top-0 z-20 flex flex-wrap items-center gap-3 border-b border-[var(--color-border)] bg-[var(--color-bg)]/95 px-4 py-3 backdrop-blur">
+    <div className="relative flex min-h-[100dvh] flex-col">
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
+      >
+        <div className="absolute -top-32 -left-32 size-[28rem] rounded-full bg-[var(--color-accent)]/15 blur-[110px]" />
+        <div className="absolute right-0 bottom-0 size-[26rem] rounded-full bg-[var(--color-brand)]/20 blur-[110px]" />
+      </div>
+
+      <header className="sticky top-0 z-20 flex flex-wrap items-center gap-3 bg-[var(--color-bg)]/70 px-4 py-3 shadow-lg shadow-black/20 backdrop-blur-xl">
         <Link href="/barra" className="flex items-center gap-2">
           <RedoxFlask size={24} />
           <span className="text-lg font-semibold tracking-tight">Barra</span>
@@ -26,7 +34,7 @@ export default async function BarraLayout({
 
         <Link
           href="/estacion/barra"
-          className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm whitespace-nowrap text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)]"
+          className="rounded-lg bg-white/5 px-3 py-1.5 text-sm whitespace-nowrap text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-white/10 hover:text-[var(--color-ink)]"
         >
           Comandas ↗
         </Link>

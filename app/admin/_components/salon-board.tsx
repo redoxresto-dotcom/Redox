@@ -59,26 +59,32 @@ function estadoDeMesa(detail: TableDetail): EstadoMesa {
   return "abierta";
 }
 
+/*
+ * Estos bordes de color no son decoración: son la señal de estado que se lee
+ * desde lejos (ver el comentario de EstadoMesa arriba). Se mantienen aunque
+ * el resto de la pantalla pase a vidrio sin bordes — "libre", que no exige
+ * atención, sí pasa a vidrio liso.
+ */
 const TONO_TARJETA: Record<EstadoMesa, string> = {
   libre:
-    "border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-free)]/60",
+    "border-transparent bg-white/5 backdrop-blur-xl hover:bg-white/10",
   abierta:
-    "border-[var(--color-busy)]/50 bg-[var(--color-busy)]/10 hover:border-[var(--color-busy)]",
+    "border-[var(--color-busy)]/50 bg-[var(--color-busy)]/10 backdrop-blur-xl hover:border-[var(--color-busy)]",
   preparando:
-    "border-[var(--color-accent)]/60 bg-[var(--color-accent)]/10 hover:border-[var(--color-accent)]",
+    "border-[var(--color-accent)]/60 bg-[var(--color-accent)]/10 backdrop-blur-xl hover:border-[var(--color-accent)]",
   pronto:
-    "border-[var(--color-free)] bg-[var(--color-free)]/15 hover:border-[var(--color-free)]",
+    "border-[var(--color-free)] bg-[var(--color-free)]/15 backdrop-blur-xl hover:border-[var(--color-free)]",
 };
 
 const TONO_PLANO: Record<EstadoMesa, string> = {
   libre:
-    "border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-muted)] hover:border-[var(--color-free)]",
+    "border-transparent bg-white/10 text-[var(--color-muted)] backdrop-blur-xl hover:bg-white/15",
   abierta:
-    "border-[var(--color-busy)] bg-[var(--color-busy)]/15 text-[var(--color-ink)]",
+    "border-[var(--color-busy)] bg-[var(--color-busy)]/15 text-[var(--color-ink)] backdrop-blur-xl",
   preparando:
-    "border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-[var(--color-ink)]",
+    "border-[var(--color-accent)] bg-[var(--color-accent)]/15 text-[var(--color-ink)] backdrop-blur-xl",
   pronto:
-    "border-[var(--color-free)] bg-[var(--color-free)]/20 text-[var(--color-ink)]",
+    "border-[var(--color-free)] bg-[var(--color-free)]/20 text-[var(--color-ink)] backdrop-blur-xl",
 };
 
 const PUNTO: Record<EstadoMesa, string> = {
@@ -292,7 +298,7 @@ export function SalonBoard({
             </p>
           </div>
           <div className="flex items-center gap-4">
-            <div className="flex rounded-lg border border-[var(--color-border)] p-0.5">
+            <div className="flex rounded-lg bg-white/5 p-0.5 backdrop-blur-md">
               {(["plano", "grilla"] as Vista[]).map((v) => (
                 <button
                   key={v}
@@ -323,7 +329,7 @@ export function SalonBoard({
         {error ? (
           <p
             role="alert"
-            className="mb-4 rounded-lg border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 px-3 py-2 text-sm text-[var(--color-danger)]"
+            className="mb-4 rounded-lg bg-[var(--color-danger)]/15 px-3 py-2 text-sm text-[var(--color-danger)] backdrop-blur-md"
           >
             {error}
           </p>
@@ -332,7 +338,7 @@ export function SalonBoard({
         {notice ? (
           <p
             role="status"
-            className="mb-4 rounded-lg border border-[var(--color-busy)]/40 bg-[var(--color-busy)]/10 px-3 py-2 text-sm text-[var(--color-busy)]"
+            className="mb-4 rounded-lg bg-[var(--color-busy)]/15 px-3 py-2 text-sm text-[var(--color-busy)] backdrop-blur-md"
           >
             {notice}
           </p>
@@ -341,11 +347,11 @@ export function SalonBoard({
         {!hasOpenShift ? (
           // Se avisa acá y no recién al cobrar: enterarse con la mesa esperando
           // y el ticket en la mano es la peor forma de descubrirlo.
-          <p className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-[var(--color-busy)]/40 bg-[var(--color-busy)]/10 px-3 py-2 text-sm text-[var(--color-busy)]">
+          <p className="mb-4 flex flex-wrap items-center gap-2 rounded-lg bg-[var(--color-busy)]/15 px-3 py-2 text-sm text-[var(--color-busy)] backdrop-blur-md">
             La caja está cerrada: se puede tomar pedidos, pero no cobrar.
             <Link
               href="/admin/caja"
-              className="rounded-lg border border-[var(--color-busy)]/60 px-2.5 py-1 font-medium transition-colors hover:bg-[var(--color-busy)]/20"
+              className="rounded-lg bg-[var(--color-busy)]/20 px-2.5 py-1 font-medium backdrop-blur-md transition-colors hover:bg-[var(--color-busy)]/30"
             >
               Abrir caja
             </Link>
@@ -381,7 +387,7 @@ export function SalonBoard({
         ) : null}
 
         {delTurno.length === 0 ? (
-          <p className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-12 text-center text-sm text-[var(--color-muted)]">
+          <p className="rounded-2xl bg-white/5 px-4 py-12 text-center text-sm text-[var(--color-muted)] backdrop-blur-xl">
             {scope === "mias"
               ? "Todavía no tomaste ninguna mesa. Tomalas desde el salón."
               : "No hay mesas libres en este momento."}
@@ -418,7 +424,7 @@ export function SalonBoard({
             // celular ve tres mesas y listo—; con scroll lateral, como en el
             // editor del plano, sigue estando, solo hay que desplazarse.
             style={{ height: CANVAS_H * scale }}
-            className="overflow-x-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]"
+            className="overflow-x-auto rounded-2xl bg-white/5 backdrop-blur-xl"
           >
             {/* La escala es una transformación: no cambia el tamaño que el div
               ocupa en el layout. Sin esta caja intermedia con la medida ya
@@ -730,10 +736,10 @@ function TablePanel({
         role="dialog"
         aria-modal="true"
         aria-label={`Mesa ${table.number}`}
-        className="relative flex h-full w-full flex-col border-l border-[var(--color-border)] bg-[var(--color-bg)] shadow-2xl sm:max-w-xl"
+        className="relative flex h-full w-full flex-col border-l border-white/10 bg-[var(--color-bg)]/80 shadow-2xl backdrop-blur-2xl sm:max-w-xl"
       >
         {/* Encabezado */}
-        <header className="flex items-center gap-3 border-b border-[var(--color-border)] px-5 py-4">
+        <header className="flex items-center gap-3 border-b border-white/10 px-5 py-4">
           <div>
             <h2 className="text-xl font-semibold">
               Mesa {table.number}
@@ -764,7 +770,7 @@ function TablePanel({
                   })
                 }
                 disabled={isPending}
-                className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm text-[var(--color-muted)] transition-colors hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] disabled:opacity-50"
+                className="rounded-lg bg-white/5 px-3 py-1.5 text-sm text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-white/10 hover:text-[var(--color-accent)] disabled:opacity-50"
               >
                 Tomar mesa
               </button>
@@ -773,10 +779,10 @@ function TablePanel({
                 type="button"
                 onClick={() => setTransfiriendo((t) => !t)}
                 disabled={isPending || staff.length === 0}
-                className={`rounded-lg border px-3 py-1.5 text-sm transition-colors disabled:opacity-50 ${
+                className={`rounded-lg px-3 py-1.5 text-sm backdrop-blur-md transition-colors disabled:opacity-50 ${
                   transfiriendo
-                    ? "border-[var(--color-accent)] text-[var(--color-accent)]"
-                    : "border-[var(--color-border)] text-[var(--color-muted)] hover:text-[var(--color-ink)]"
+                    ? "bg-[var(--color-accent)]/15 text-[var(--color-accent)]"
+                    : "bg-white/5 text-[var(--color-muted)] hover:bg-white/10 hover:text-[var(--color-ink)]"
                 }`}
               >
                 Transferir
@@ -795,7 +801,7 @@ function TablePanel({
         </header>
 
         {transfiriendo ? (
-          <div className="border-b border-[var(--color-border)] bg-[var(--color-surface)] px-5 py-3">
+          <div className="border-b border-white/10 bg-white/5 px-5 py-3 backdrop-blur-xl">
             <p className="mb-2 text-sm text-[var(--color-muted)]">
               ¿A quién le pasás la mesa {table.number}?
             </p>
@@ -815,7 +821,7 @@ function TablePanel({
                       return result;
                     })
                   }
-                  className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm transition-colors hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] disabled:opacity-50"
+                  className="rounded-lg bg-white/5 px-3 py-2 text-sm backdrop-blur-md transition-colors hover:bg-white/10 hover:text-[var(--color-accent)] disabled:opacity-50"
                 >
                   {p.full_name}
                 </button>
@@ -826,10 +832,10 @@ function TablePanel({
 
         {comanda.porEntregar > 0 ? (
           <div
-            className={`flex flex-wrap items-center gap-3 border-b px-5 py-3 ${
+            className={`flex flex-wrap items-center gap-3 border-b px-5 py-3 backdrop-blur-xl ${
               comanda.completo
                 ? "border-[var(--color-free)]/40 bg-[var(--color-free)]/15"
-                : "border-[var(--color-border)] bg-[var(--color-surface)]"
+                : "border-white/10 bg-white/5"
             }`}
           >
             <div>
@@ -861,7 +867,7 @@ function TablePanel({
         ) : null}
 
         {/* Cuenta */}
-        <div className="max-h-[38%] overflow-y-auto border-b border-[var(--color-border)] px-5 py-3">
+        <div className="max-h-[38%] overflow-y-auto border-b border-white/10 px-5 py-3">
           {items.length === 0 ? (
             <p className="py-6 text-center text-sm text-[var(--color-muted)]">
               La mesa todavía no tiene consumos.
@@ -912,7 +918,7 @@ function TablePanel({
                       aria-label="Restar una unidad"
                       disabled={isPending}
                       onClick={() => run(() => changeItemQuantity(item.id, -1))}
-                      className="size-8 rounded-lg border border-[var(--color-border)] text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)] disabled:opacity-50"
+                      className="size-8 rounded-lg bg-white/5 text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-white/10 hover:text-[var(--color-ink)] disabled:opacity-50"
                     >
                       −
                     </button>
@@ -924,7 +930,7 @@ function TablePanel({
                       aria-label="Sumar una unidad"
                       disabled={isPending}
                       onClick={() => run(() => changeItemQuantity(item.id, 1))}
-                      className="size-8 rounded-lg border border-[var(--color-border)] text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)] disabled:opacity-50"
+                      className="size-8 rounded-lg bg-white/5 text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-white/10 hover:text-[var(--color-ink)] disabled:opacity-50"
                     >
                       +
                     </button>
@@ -973,7 +979,7 @@ function TablePanel({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Buscar…"
-              className="ml-auto w-32 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-1.5 text-sm outline-none focus:border-[var(--color-accent)]"
+              className="ml-auto w-32 rounded-lg bg-white/5 px-3 py-1.5 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
             />
           </div>
 
@@ -992,7 +998,7 @@ function TablePanel({
                       onClick={() =>
                         run(() => addProductToTable(table.id, product.id))
                       }
-                      className="flex h-full w-full flex-col items-start gap-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 text-left transition-colors hover:border-[var(--color-accent)] active:bg-[var(--color-surface-2)] disabled:opacity-50"
+                      className="flex h-full w-full flex-col items-start gap-1 rounded-xl bg-white/5 p-3 text-left backdrop-blur-md transition-colors hover:bg-white/10 active:bg-white/15 disabled:opacity-50"
                     >
                       <span className="text-sm leading-tight">
                         {product.name}
@@ -1009,7 +1015,7 @@ function TablePanel({
         </div>
 
         {/* Cierre de mesa */}
-        <footer className="border-t border-[var(--color-border)] px-5 py-4">
+        <footer className="border-t border-white/10 px-5 py-4">
           <div className="mb-3 flex items-end justify-between">
             <span className="text-sm text-[var(--color-muted)]">
               Total {unidades > 0 ? `· ${unidades} ítems` : ""}
@@ -1038,7 +1044,7 @@ function TablePanel({
                         return result;
                       })
                     }
-                    className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm text-[var(--color-muted)] transition-colors hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:opacity-50"
+                    className="w-full rounded-xl bg-white/5 px-4 py-3 text-sm text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-[var(--color-danger)]/15 hover:text-[var(--color-danger)] disabled:opacity-50"
                   >
                     Liberar mesa sin cobrar
                   </button>
@@ -1054,7 +1060,7 @@ function TablePanel({
                 type="button"
                 disabled={isPending}
                 onClick={() => run(() => openTable(table.id))}
-                className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-sm text-[var(--color-muted)] disabled:opacity-40"
+                className="w-full rounded-xl bg-white/5 px-4 py-3 text-sm text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-white/10 disabled:opacity-40"
               >
                 Abrir mesa
               </button>
@@ -1070,7 +1076,7 @@ function TablePanel({
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
                 disabled={isPending}
-                className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-danger)] disabled:opacity-50"
+                className="w-full rounded-lg bg-white/5 px-3 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10 disabled:opacity-50"
               >
                 <option value="">Motivo (opcional)</option>
                 <option value="Error al tomar el pedido">
@@ -1112,10 +1118,10 @@ function TablePanel({
                     type="button"
                     disabled={isPending}
                     onClick={() => cobrar(method)}
-                    className={`rounded-xl px-4 py-3.5 text-sm font-semibold disabled:opacity-50 ${
+                    className={`rounded-xl px-4 py-3.5 text-sm font-semibold backdrop-blur-md disabled:opacity-50 ${
                       method === "efectivo"
                         ? "bg-[var(--color-free)] text-[#04140a]"
-                        : "border border-[var(--color-border)] transition-colors hover:border-[var(--color-free)]"
+                        : "bg-white/5 transition-colors hover:bg-white/10"
                     }`}
                   >
                     {PAYMENT_LABELS[method]}
@@ -1161,7 +1167,7 @@ function TablePanel({
                 type="button"
                 disabled={isPending}
                 onClick={() => setConfirmingCancel(true)}
-                className="w-full rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-sm text-[var(--color-muted)] transition-colors hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:opacity-50"
+                className="w-full rounded-xl bg-white/5 px-4 py-2.5 text-sm text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-[var(--color-danger)]/15 hover:text-[var(--color-danger)] disabled:opacity-50"
               >
                 Cancelar pedido
               </button>

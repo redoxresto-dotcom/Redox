@@ -61,7 +61,7 @@ export function ImportVentas({ manuales }: { manuales: VentaManual[] }) {
       <button
         type="button"
         onClick={() => setAbierto((v) => !v)}
-        className="flex w-full items-center justify-between rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-left"
+        className="flex w-full items-center justify-between rounded-2xl bg-white/5 px-4 py-3 text-left backdrop-blur-xl transition-colors hover:bg-white/10"
       >
         <span className="text-sm font-medium">
           Cargar ventas sin conexión (corte de luz / internet)
@@ -75,7 +75,7 @@ export function ImportVentas({ manuales }: { manuales: VentaManual[] }) {
       </button>
 
       {abierto ? (
-        <div className="mt-2 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+        <div className="mt-2 rounded-2xl bg-white/5 p-4 shadow-lg shadow-black/10 backdrop-blur-xl">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <p className="text-xs text-[var(--color-muted)]">
               Una fila por producto. Las líneas de un mismo ticket comparten{" "}
@@ -111,14 +111,14 @@ export function ImportVentas({ manuales }: { manuales: VentaManual[] }) {
           {error ? (
             <p
               role="alert"
-              className="mt-3 rounded-lg border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 px-3 py-2 text-sm text-[var(--color-danger)]"
+              className="mt-3 rounded-lg bg-[var(--color-danger)]/15 px-3 py-2 text-sm text-[var(--color-danger)] backdrop-blur-md"
             >
               {error}
             </p>
           ) : null}
 
           {result && result.errores.length > 0 ? (
-            <div className="mt-3 rounded-lg border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 p-3 text-sm">
+            <div className="mt-3 rounded-lg bg-[var(--color-danger)]/15 p-3 text-sm backdrop-blur-md">
               <p className="font-medium text-[var(--color-danger)]">
                 No se cargó nada. Corregí estas filas:
               </p>
@@ -134,7 +134,7 @@ export function ImportVentas({ manuales }: { manuales: VentaManual[] }) {
           ) : null}
 
           {result && result.errores.length === 0 ? (
-            <p className="mt-3 rounded-lg border border-[var(--color-free)]/40 bg-[var(--color-free)]/10 px-3 py-2 text-sm text-[var(--color-free)]">
+            <p className="mt-3 rounded-lg bg-[var(--color-free)]/15 px-3 py-2 text-sm text-[var(--color-free)] backdrop-blur-md">
               {result.tickets} ticket{result.tickets === 1 ? "" : "s"} ·{" "}
               {result.lineas} línea{result.lineas === 1 ? "" : "s"} ·{" "}
               {formatMoney(result.total)} cargados.
@@ -142,7 +142,7 @@ export function ImportVentas({ manuales }: { manuales: VentaManual[] }) {
           ) : null}
 
           {manuales.length > 0 ? (
-            <div className="mt-4 border-t border-[var(--color-border)] pt-3">
+            <div className="mt-4 border-t border-white/10 pt-3">
               <p className="mb-1.5 text-xs tracking-wide text-[var(--color-muted)] uppercase">
                 Ventas cargadas a mano en este período
               </p>
@@ -168,7 +168,7 @@ export function ImportVentas({ manuales }: { manuales: VentaManual[] }) {
                       type="button"
                       disabled={isPending}
                       onClick={() => borrar(m.id)}
-                      className="rounded-md border border-[var(--color-border)] px-2 py-0.5 text-xs text-[var(--color-muted)] transition-colors hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:opacity-50"
+                      className="rounded-md bg-white/5 px-2 py-0.5 text-xs text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-[var(--color-danger)]/15 hover:text-[var(--color-danger)] disabled:opacity-50"
                     >
                       Borrar
                     </button>

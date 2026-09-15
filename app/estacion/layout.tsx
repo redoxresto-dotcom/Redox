@@ -24,8 +24,16 @@ export default async function EstacionLayout({
   const soloSuPantalla = stationOf(profile.role) !== null;
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="flex items-center gap-3 border-b border-[var(--color-border)] px-4 py-2">
+    <div className="relative flex min-h-screen flex-col">
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
+      >
+        <div className="absolute -top-32 -left-32 size-[28rem] rounded-full bg-[var(--color-accent)]/15 blur-[110px]" />
+        <div className="absolute right-0 bottom-0 size-[26rem] rounded-full bg-[var(--color-brand)]/20 blur-[110px]" />
+      </div>
+
+      <header className="flex items-center gap-3 bg-white/5 px-4 py-2 backdrop-blur-xl">
         <RedoxFlask size={20} />
         {soloSuPantalla ? (
           profile.role === "barra" ? (
@@ -58,7 +66,7 @@ export default async function EstacionLayout({
         <form action={signOut}>
           <button
             type="submit"
-            className="rounded-lg border border-[var(--color-border)] px-2.5 py-1 text-sm text-[var(--color-muted)] transition-colors hover:border-[var(--color-danger)] hover:text-[var(--color-danger)]"
+            className="rounded-lg bg-white/5 px-2.5 py-1 text-sm text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-[var(--color-danger)]/15 hover:text-[var(--color-danger)]"
           >
             Salir
           </button>

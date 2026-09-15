@@ -112,7 +112,7 @@ export function TicketModal({
         }
       `}</style>
 
-      <div className="w-full max-w-sm rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+      <div className="w-full max-w-sm rounded-2xl bg-[var(--color-surface)]/70 p-4 shadow-2xl backdrop-blur-2xl">
         <div
           id="ticket-print"
           className="mx-auto w-[80mm] max-w-full rounded-lg bg-white p-3 text-black"
@@ -133,7 +133,7 @@ export function TicketModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-[var(--color-border)] px-4 py-2.5 text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)]"
+            className="rounded-lg bg-white/5 px-4 py-2.5 text-sm text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-white/10 hover:text-[var(--color-ink)]"
           >
             Cerrar
           </button>

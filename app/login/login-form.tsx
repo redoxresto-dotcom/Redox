@@ -10,7 +10,7 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="w-full rounded-xl bg-[var(--color-accent)] px-4 py-3.5 font-semibold text-[#04121c] transition-opacity disabled:opacity-50"
+      className="w-full rounded-xl bg-[var(--color-accent)]/90 px-4 py-3.5 font-semibold text-[#04121c] shadow-lg shadow-[var(--color-accent)]/20 backdrop-blur-md transition-colors hover:bg-[var(--color-accent)] disabled:opacity-50"
     >
       {pending ? "Entrando…" : "Entrar"}
     </button>
@@ -39,7 +39,7 @@ export function LoginForm({ redirectTo }: { redirectTo: string | null }) {
           required
           autoFocus
           placeholder="Número de documento"
-          className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-3 outline-none focus:border-[var(--color-accent)]"
+          className="rounded-xl bg-white/5 px-4 py-3 shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
         />
         <span className="text-xs text-[var(--color-muted)]">
           Si todavía usás correo, también funciona.
@@ -53,7 +53,7 @@ export function LoginForm({ redirectTo }: { redirectTo: string | null }) {
           type="password"
           autoComplete="current-password"
           required
-          className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)] px-4 py-3 outline-none focus:border-[var(--color-accent)]"
+          className="rounded-xl bg-white/5 px-4 py-3 shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
         />
       </label>
 

@@ -64,12 +64,14 @@ function faseDe(mesa: PoolStatus, ahora: number): Fase {
   return "jugando";
 }
 
+// El borde de color acá es la señal de estado, igual que en el resto de las
+// pantallas de monitor: se mantiene aunque el resto pase a vidrio.
 const TONO: Record<Fase, string> = {
-  libre: "border-[var(--color-border)] bg-[var(--color-surface)]",
-  jugando: "border-[var(--color-free)]/60 bg-[var(--color-free)]/10",
+  libre: "border-transparent bg-white/5 backdrop-blur-xl",
+  jugando: "border-[var(--color-free)]/60 bg-[var(--color-free)]/10 backdrop-blur-xl",
   "por-terminar":
-    "border-[var(--color-busy)] bg-[var(--color-busy)]/15 animate-pulse",
-  vencida: "border-[var(--color-danger)] bg-[var(--color-danger)]/15",
+    "border-[var(--color-busy)] bg-[var(--color-busy)]/15 backdrop-blur-xl animate-pulse",
+  vencida: "border-[var(--color-danger)] bg-[var(--color-danger)]/15 backdrop-blur-xl",
 };
 
 /** "14:30" — la hora del turno, que es lo que se lee de un vistazo. */
@@ -224,7 +226,7 @@ export function PoolBoard({
             <button
               type="button"
               onClick={() => setReservaAbierta((v) => !v)}
-              className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm whitespace-nowrap text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)]"
+              className="rounded-lg bg-white/5 px-3 py-2 text-sm whitespace-nowrap text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-white/10 hover:text-[var(--color-ink)]"
             >
               {reservaAbierta ? "Cerrar reserva" : "Reserva Pool"}
               {pendientes > 0 && !reservaAbierta ? (
@@ -237,7 +239,7 @@ export function PoolBoard({
           <Link
             href="/pool"
             target="_blank"
-            className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm whitespace-nowrap text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)]"
+            className="rounded-lg bg-white/5 px-3 py-2 text-sm whitespace-nowrap text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-white/10 hover:text-[var(--color-ink)]"
           >
             Pantalla del salón ↗
           </Link>
@@ -245,14 +247,14 @@ export function PoolBoard({
             <>
               <Link
                 href="/admin/pool/reservas"
-                className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm whitespace-nowrap text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)]"
+                className="rounded-lg bg-white/5 px-3 py-2 text-sm whitespace-nowrap text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-white/10 hover:text-[var(--color-ink)]"
               >
                 Reservas del día
               </Link>
               <button
                 type="button"
                 onClick={() => setConfig((c) => !c)}
-                className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm whitespace-nowrap text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)]"
+                className="rounded-lg bg-white/5 px-3 py-2 text-sm whitespace-nowrap text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-white/10 hover:text-[var(--color-ink)]"
               >
                 {config ? "Cerrar ajustes" : "Ajustes"}
               </button>
@@ -274,14 +276,14 @@ export function PoolBoard({
       {error ? (
         <p
           role="alert"
-          className="mb-4 rounded-lg border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 px-3 py-2 text-sm text-[var(--color-danger)]"
+          className="mb-4 rounded-lg bg-[var(--color-danger)]/15 px-3 py-2 text-sm text-[var(--color-danger)] backdrop-blur-md"
         >
           {error}
         </p>
       ) : null}
 
       {!tarifa ? (
-        <p className="mb-4 rounded-lg border border-[var(--color-busy)]/40 bg-[var(--color-busy)]/10 px-3 py-2 text-sm text-[var(--color-busy)]">
+        <p className="mb-4 rounded-lg bg-[var(--color-busy)]/15 px-3 py-2 text-sm text-[var(--color-busy)] backdrop-blur-md">
           No hay ningún producto marcado como tarifa de pool en el catálogo. Sin
           eso no se puede vender tiempo: marcá uno en{" "}
           <Link href="/admin/catalogo" className="underline">
@@ -292,7 +294,7 @@ export function PoolBoard({
       ) : null}
 
       {estado.length === 0 ? (
-        <p className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-12 text-center text-sm text-[var(--color-muted)]">
+        <p className="rounded-2xl bg-white/5 px-4 py-12 text-center text-sm text-[var(--color-muted)] backdrop-blur-xl">
           {isManager
             ? "Agregá las mesas de pool desde Ajustes."
             : "Pedile a un encargado que configure las mesas de pool."}
@@ -464,7 +466,7 @@ function MesaPool({
                   ),
                 );
               }}
-              className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2 py-1.5 text-sm outline-none focus:border-[var(--color-accent)] disabled:opacity-50"
+              className="w-full rounded-lg bg-white/5 px-2 py-1.5 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10 disabled:opacity-50"
             />
           ))}
         </div>
@@ -502,7 +504,7 @@ function MesaPool({
               required
               autoFocus
               placeholder="Minutos"
-              className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+              className="w-full rounded-lg bg-white/5 px-2 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
             />
             <button
               type="submit"
@@ -524,7 +526,7 @@ function MesaPool({
             <button
               type="button"
               onClick={() => setOtro(true)}
-              className="flex-1 rounded-lg border border-[var(--color-border)] px-2 py-2 text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)]"
+              className="flex-1 rounded-lg bg-white/5 px-2 py-2 text-sm text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-white/10 hover:text-[var(--color-ink)]"
             >
               Otro tiempo
             </button>
@@ -534,7 +536,7 @@ function MesaPool({
                 type="button"
                 disabled={isPending}
                 onClick={() => onRun(() => endPoolSession(mesa.session_id!))}
-                className="flex-1 rounded-lg border border-[var(--color-border)] px-2 py-2 text-sm text-[var(--color-muted)] transition-colors hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:opacity-50"
+                className="flex-1 rounded-lg bg-white/5 px-2 py-2 text-sm text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-[var(--color-danger)]/15 hover:text-[var(--color-danger)] disabled:opacity-50"
               >
                 Terminar
               </button>
@@ -545,7 +547,7 @@ function MesaPool({
         {mesa.order_id ? (
           <Link
             href="/admin"
-            className="rounded-lg border border-[var(--color-border)] px-2 py-2 text-center text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)]"
+            className="rounded-lg bg-white/5 px-2 py-2 text-center text-sm text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-white/10 hover:text-[var(--color-ink)]"
           >
             Ver la cuenta y cobrar
           </Link>
@@ -553,7 +555,7 @@ function MesaPool({
       </div>
 
       <footer
-        className={`mt-3 border-t border-[var(--color-border)] pt-2 text-xs ${
+        className={`mt-3 border-t border-white/10 pt-2 text-xs ${
           pañoVencido
             ? "font-medium text-[var(--color-busy)]"
             : "text-[var(--color-muted)]"
@@ -591,7 +593,7 @@ function ReservasPendientes({
   onRun: (fn: () => Promise<{ error: string | null }>) => void;
 }) {
   return (
-    <section className="mt-6 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 sm:p-5">
+    <section className="mt-6 rounded-2xl bg-white/5 p-4 shadow-lg shadow-black/10 backdrop-blur-xl sm:p-5">
       <h2 className="mb-3 text-sm font-medium tracking-wide text-[var(--color-muted)] uppercase">
         Reservas pendientes
         <span className="ml-2 rounded-full bg-[var(--color-accent)]/20 px-1.5 py-0.5 text-xs font-semibold text-[var(--color-accent)] tabular-nums">
@@ -624,7 +626,7 @@ function ReservasPendientes({
                   return (
                     <li
                       key={r.id}
-                      className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg bg-[var(--color-surface-2)] px-3 py-2 text-sm"
+                      className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg bg-white/5 px-3 py-2 text-sm backdrop-blur-md"
                     >
                       <span
                         className={`tabular-nums ${DEMORA_TINTA[demora]}`}
@@ -666,7 +668,7 @@ function ReservasPendientes({
                             onClick={() =>
                               onRun(() => releasePoolReservation(r.id))
                             }
-                            className="rounded-md border border-[var(--color-border)] px-2.5 py-1 text-xs text-[var(--color-muted)] transition-colors hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:opacity-40"
+                            className="rounded-md bg-white/5 px-2.5 py-1 text-xs text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-[var(--color-danger)]/15 hover:text-[var(--color-danger)] disabled:opacity-40"
                           >
                             Liberar
                           </button>
@@ -677,7 +679,7 @@ function ReservasPendientes({
                             onClick={() =>
                               onRun(() => releasePoolReservation(r.id, true))
                             }
-                            className="rounded-md border border-[var(--color-border)] px-2.5 py-1 text-xs text-[var(--color-muted)] transition-colors hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:opacity-40"
+                            className="rounded-md bg-white/5 px-2.5 py-1 text-xs text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-[var(--color-danger)]/15 hover:text-[var(--color-danger)] disabled:opacity-40"
                           >
                             No vino
                           </button>
@@ -714,7 +716,7 @@ function Ajustes({
   );
 
   return (
-    <section className="mt-8 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
+    <section className="mt-8 rounded-2xl bg-white/5 p-5 shadow-lg shadow-black/10 backdrop-blur-xl">
       <h2 className="text-lg font-medium">Ajustes de las mesas de pool</h2>
       <p className="mt-1 mb-4 text-sm text-[var(--color-muted)]">
         Una mesa de pool es una mesa del salón con un aparato asignado. El
@@ -737,7 +739,7 @@ function Ajustes({
             <span className="text-xs text-[var(--color-muted)]">Mesa</span>
             <select
               name="table_id"
-              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+              className="rounded-lg bg-white/5 px-3 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
             >
               {candidatas.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -755,7 +757,7 @@ function Ajustes({
               name="device_id"
               required
               placeholder="pool-1"
-              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+              className="rounded-lg bg-white/5 px-3 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
             />
           </label>
 
@@ -773,7 +775,7 @@ function Ajustes({
         {mesasOrdenadas.map((mesa) => (
           <li
             key={mesa.table_id}
-            className="flex flex-wrap items-end gap-3 border-t border-[var(--color-border)] pt-3"
+            className="flex flex-wrap items-end gap-3 border-t border-white/10 pt-3"
           >
             <span className="min-w-20 font-medium">
               {nombreMesa(mesa.table_number, mesa.table_name)}
@@ -796,7 +798,7 @@ function Ajustes({
                     );
                   }
                 }}
-                className="w-24 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2 py-1.5 text-sm tabular-nums outline-none focus:border-[var(--color-accent)]"
+                className="w-24 rounded-lg bg-white/5 px-2 py-1.5 text-sm tabular-nums shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
               />
             </label>
 
@@ -818,7 +820,7 @@ function Ajustes({
                     );
                   }
                 }}
-                className="w-24 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2 py-1.5 text-sm tabular-nums outline-none focus:border-[var(--color-accent)]"
+                className="w-24 rounded-lg bg-white/5 px-2 py-1.5 text-sm tabular-nums shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
               />
             </label>
 
@@ -835,7 +837,7 @@ function Ajustes({
                   ),
                 )
               }
-              className="w-full rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted)] transition-colors hover:border-[var(--color-free)] hover:text-[var(--color-free)] disabled:opacity-50 sm:w-auto"
+              className="w-full rounded-lg bg-white/5 px-3 py-2 text-sm text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-[var(--color-free)]/15 hover:text-[var(--color-free)] disabled:opacity-50 sm:w-auto"
             >
               Registrar cambio de paño
             </button>
@@ -844,7 +846,7 @@ function Ajustes({
               type="button"
               disabled={isPending}
               onClick={() => onRun(() => removePoolTable(mesa.table_id))}
-              className="w-full rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted)] transition-colors hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:opacity-50 sm:ml-auto sm:w-auto"
+              className="w-full rounded-lg bg-white/5 px-3 py-2 text-sm text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-[var(--color-danger)]/15 hover:text-[var(--color-danger)] disabled:opacity-50 sm:ml-auto sm:w-auto"
             >
               Quitar
             </button>
@@ -912,14 +914,14 @@ function PanelReserva({
 
   if (mesasPool.length === 0) {
     return (
-      <section className="mb-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 text-sm text-[var(--color-muted)]">
+      <section className="mb-5 rounded-2xl bg-white/5 p-5 text-sm text-[var(--color-muted)] backdrop-blur-xl">
         Primero configurá al menos una mesa de pool desde Ajustes.
       </section>
     );
   }
 
   return (
-    <section className="mb-5 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
+    <section className="mb-5 rounded-2xl bg-white/5 p-5 shadow-lg shadow-black/10 backdrop-blur-xl">
       <h2 className="text-lg font-medium">Reservar mesa de pool</h2>
       <p className="mt-1 mb-4 text-sm text-[var(--color-muted)]">
         Guarda el turno. No enciende la mesa: cuando llegue el cliente, activá la
@@ -949,7 +951,7 @@ function PanelReserva({
             name="customer"
             required
             autoFocus
-            className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+            className="rounded-lg bg-white/5 px-3 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
           />
         </label>
 
@@ -964,10 +966,10 @@ function PanelReserva({
             value={tel}
             onChange={(e) => setTel(e.target.value)}
             aria-invalid={telMal}
-            className={`rounded-lg border bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)] ${
+            className={`rounded-lg px-3 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none ${
               telMal
-                ? "border-[var(--color-danger)]"
-                : "border-[var(--color-border)]"
+                ? "bg-[var(--color-danger)]/10 ring-1 ring-[var(--color-danger)]/50"
+                : "bg-white/5 focus:bg-white/10"
             }`}
           />
           {telMal ? (
@@ -986,7 +988,7 @@ function PanelReserva({
             required
             value={cuando}
             onChange={(e) => setCuando(e.target.value)}
-            className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+            className="rounded-lg bg-white/5 px-3 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
           />
         </label>
 
@@ -997,7 +999,7 @@ function PanelReserva({
           <select
             value={minutes}
             onChange={(e) => setMinutes(Number(e.target.value))}
-            className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+            className="rounded-lg bg-white/5 px-3 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
           >
             {POOL_RESERVA_BLOQUES.map((min) => (
               <option key={min} value={min}>
@@ -1012,7 +1014,7 @@ function PanelReserva({
           <select
             value={tableId}
             onChange={(e) => setTableId(e.target.value)}
-            className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+            className="rounded-lg bg-white/5 px-3 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
           >
             {mesasPool.map((m) => (
               <option key={m.id} value={m.id}>
@@ -1034,7 +1036,7 @@ function PanelReserva({
       </form>
 
       {choque ? (
-        <p className="mt-3 rounded-lg border border-[var(--color-busy)]/40 bg-[var(--color-busy)]/10 px-3 py-2 text-sm text-[var(--color-busy)]">
+        <p className="mt-3 rounded-lg bg-[var(--color-busy)]/15 px-3 py-2 text-sm text-[var(--color-busy)] backdrop-blur-md">
           Ojo: se pisa con la reserva de {choque.customer_name} a las{" "}
           {horaCorta(choque.scheduled_at)} en esa mesa. Se puede guardar igual.
         </p>

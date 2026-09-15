@@ -166,7 +166,7 @@ export function StationBoard({ station, label, tickets }: Props) {
 
   return (
     <>
-      <header className="flex flex-wrap items-center gap-3 border-b border-[var(--color-border)] px-4 py-3">
+      <header className="flex flex-wrap items-center gap-3 border-b border-white/10 px-4 py-3">
         <h1 className="text-2xl font-semibold">{label}</h1>
         <span
           className={`rounded-full px-3 py-1 text-sm font-medium ${
@@ -193,7 +193,7 @@ export function StationBoard({ station, label, tickets }: Props) {
             type="button"
             onClick={() => setMuted((m) => !m)}
             title={muted ? "Activar sonido" : "Silenciar"}
-            className="rounded-lg px-2 py-1 text-lg transition-colors hover:bg-[var(--color-surface)]"
+            className="rounded-lg px-2 py-1 text-lg transition-colors hover:bg-white/10"
           >
             {muted ? "🔇" : "🔊"}
           </button>
@@ -205,7 +205,7 @@ export function StationBoard({ station, label, tickets }: Props) {
             }}
             title="Pantalla completa"
             aria-label="Pantalla completa"
-            className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)]"
+            className="rounded-lg bg-white/5 px-3 py-1.5 text-sm text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-white/10 hover:text-[var(--color-ink)]"
           >
             ⛶
           </button>
@@ -215,7 +215,7 @@ export function StationBoard({ station, label, tickets }: Props) {
       {error ? (
         <p
           role="alert"
-          className="mx-4 mt-3 rounded-lg border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 px-3 py-2 text-sm text-[var(--color-danger)]"
+          className="mx-4 mt-3 rounded-lg bg-[var(--color-danger)]/15 px-3 py-2 text-sm text-[var(--color-danger)] backdrop-blur-md"
         >
           {error}
         </p>
@@ -275,9 +275,11 @@ function TicketCard({
     null
   );
 
+  // El borde de color acá es la señal de urgencia que se lee desde lejos en
+  // la pantalla de estación: se mantiene aunque el resto pase a vidrio.
   const borde =
     pendientes.length === 0
-      ? "border-[var(--color-border)] opacity-60"
+      ? "border-transparent opacity-60"
       : peor === "late"
         ? "border-[var(--color-danger)] animate-pulse"
         : peor === "warn"
@@ -286,9 +288,9 @@ function TicketCard({
 
   return (
     <article
-      className={`flex h-full flex-col rounded-2xl border-2 bg-[var(--color-surface)] transition-colors ${borde}`}
+      className={`flex h-full flex-col rounded-2xl border-2 bg-white/5 backdrop-blur-xl transition-colors ${borde}`}
     >
-      <header className="flex items-baseline gap-2 border-b border-[var(--color-border)] px-4 py-3">
+      <header className="flex items-baseline gap-2 border-b border-white/10 px-4 py-3">
         <h2 className="text-2xl font-bold">Mesa {ticket.tableNumber}</h2>
         {masVieja ? (
           <span
@@ -309,7 +311,7 @@ function TicketCard({
         )}
       </header>
 
-      <ul className="flex-1 divide-y divide-[var(--color-border)]">
+      <ul className="flex-1 divide-y divide-white/10">
         {ticket.items.map((item) => (
           <ItemRow
             key={item.id}
@@ -322,7 +324,7 @@ function TicketCard({
       </ul>
 
       {pendientes.length > 1 ? (
-        <footer className="border-t border-[var(--color-border)] p-3">
+        <footer className="border-t border-white/10 p-3">
           <button
             type="button"
             disabled={isPending}
@@ -395,7 +397,7 @@ function ItemRow({
               type="button"
               disabled={isPending}
               onClick={() => mover("preparando")}
-              className="flex-1 rounded-lg border border-[var(--color-border)] px-3 py-2.5 text-sm font-medium transition-colors hover:border-[var(--color-busy)] hover:text-[var(--color-busy)] disabled:opacity-50"
+              className="flex-1 rounded-lg bg-white/5 px-3 py-2.5 text-sm font-medium backdrop-blur-md transition-colors hover:bg-[var(--color-busy)]/15 hover:text-[var(--color-busy)] disabled:opacity-50"
             >
               Empezar
             </button>
@@ -437,7 +439,7 @@ function ItemRow({
             type="button"
             disabled={isPending}
             onClick={() => mover(item.started_at ? "preparando" : "pedido")}
-            className="ml-auto rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)] disabled:opacity-50"
+            className="ml-auto rounded-lg bg-white/5 px-3 py-2 text-sm text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-white/10 hover:text-[var(--color-ink)] disabled:opacity-50"
           >
             ↩ Deshacer
           </button>

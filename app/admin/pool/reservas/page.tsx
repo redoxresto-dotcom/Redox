@@ -90,7 +90,7 @@ export default async function ReservasPoolPage({
                 type="date"
                 name="d"
                 defaultValue={dia}
-                className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+                className="rounded-lg bg-white/5 px-3 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
               />
             </label>
             <button
@@ -102,7 +102,7 @@ export default async function ReservasPoolPage({
           </form>
           <Link
             href="/admin/pool"
-            className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)]"
+            className="rounded-lg bg-white/5 px-3 py-2 text-sm text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-white/10 hover:text-[var(--color-ink)]"
           >
             ← Panel
           </Link>
@@ -110,11 +110,11 @@ export default async function ReservasPoolPage({
       </header>
 
       {reservas.length === 0 ? (
-        <p className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-12 text-center text-sm text-[var(--color-muted)]">
+        <p className="rounded-2xl bg-white/5 px-4 py-12 text-center text-sm text-[var(--color-muted)] backdrop-blur-xl">
           No hay reservas registradas para ese día.
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]">
+        <div className="overflow-x-auto rounded-2xl bg-white/5 backdrop-blur-xl">
           <table className="w-full min-w-[720px] text-sm">
             <thead>
               <tr className="text-left text-xs tracking-wide text-[var(--color-muted)] uppercase">
@@ -131,7 +131,7 @@ export default async function ReservasPoolPage({
               {reservas.map((r) => (
                 <tr
                   key={r.id}
-                  className="border-t border-[var(--color-border)]"
+                  className="border-t border-white/10"
                 >
                   <td className="px-4 py-2.5 tabular-nums">
                     {hora(r.scheduled_at)}

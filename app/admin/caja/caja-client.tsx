@@ -97,14 +97,14 @@ export function CajaClient({
       {error ? (
         <p
           role="alert"
-          className="mb-4 rounded-lg border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 px-3 py-2 text-sm text-[var(--color-danger)]"
+          className="mb-4 rounded-lg bg-[var(--color-danger)]/15 px-3 py-2 text-sm text-[var(--color-danger)] backdrop-blur-md"
         >
           {error}
         </p>
       ) : null}
 
       {shift === null ? (
-        <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
+        <section className="rounded-2xl bg-white/5 p-5 shadow-lg shadow-black/10 backdrop-blur-xl">
           <h2 className="text-lg font-medium">Abrir la caja</h2>
           <p className="mt-1 mb-4 text-sm text-[var(--color-muted)]">
             Contá el fondo de cambio con el que arranca el turno. Es contra ese
@@ -127,7 +127,7 @@ export function CajaClient({
                 defaultValue={0}
                 required
                 autoFocus
-                className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 tabular-nums outline-none focus:border-[var(--color-accent)]"
+                className="rounded-lg bg-white/5 px-3 py-2 tabular-nums shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
               />
             </label>
             <button
@@ -141,7 +141,7 @@ export function CajaClient({
         </section>
       ) : (
         <section className="grid gap-4 sm:grid-cols-2">
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
+          <div className="rounded-2xl bg-white/5 p-5 shadow-lg shadow-black/10 backdrop-blur-xl">
             <h2 className="text-sm tracking-wide text-[var(--color-muted)] uppercase">
               Vendido en el turno
             </h2>
@@ -155,7 +155,7 @@ export function CajaClient({
                 : ""}
             </p>
 
-            <ul className="mt-4 grid gap-1.5 border-t border-[var(--color-border)] pt-3">
+            <ul className="mt-4 grid gap-1.5 border-t border-white/10 pt-3">
               {PAYMENT_METHODS.map((method) => (
                 <li
                   key={method}
@@ -172,7 +172,7 @@ export function CajaClient({
             </ul>
           </div>
 
-          <div className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
+          <div className="rounded-2xl bg-white/5 p-5 shadow-lg shadow-black/10 backdrop-blur-xl">
             <h2 className="text-sm tracking-wide text-[var(--color-muted)] uppercase">
               Efectivo esperado en caja
             </h2>
@@ -184,7 +184,7 @@ export function CajaClient({
               {formatMoney(summary.porMedio.efectivo ?? 0)}
             </p>
 
-            <div className="mt-4 border-t border-[var(--color-border)] pt-4">
+            <div className="mt-4 border-t border-white/10 pt-4">
               {!isAdmin ? (
                 <p className="text-sm text-[var(--color-muted)]">
                   El cierre y el arqueo los hace un encargado.
@@ -210,7 +210,7 @@ export function CajaClient({
                       step="0.01"
                       required
                       autoFocus
-                      className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 tabular-nums outline-none focus:border-[var(--color-accent)]"
+                      className="rounded-lg bg-white/5 px-3 py-2 tabular-nums shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
                     />
                   </label>
                   <label className="grid gap-1">
@@ -219,7 +219,7 @@ export function CajaClient({
                     </span>
                     <input
                       name="notes"
-                      className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+                      className="rounded-lg bg-white/5 px-3 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
                     />
                   </label>
                   <div className="grid grid-cols-2 gap-2">
@@ -227,7 +227,7 @@ export function CajaClient({
                       type="button"
                       onClick={() => setContando(false)}
                       disabled={isPending}
-                      className="rounded-xl border border-[var(--color-border)] px-4 py-2.5 text-sm disabled:opacity-50"
+                      className="rounded-xl bg-white/5 px-4 py-2.5 text-sm backdrop-blur-md transition-colors hover:bg-white/10 disabled:opacity-50"
                     >
                       Cancelar
                     </button>
@@ -244,7 +244,7 @@ export function CajaClient({
                 <button
                   type="button"
                   onClick={() => setContando(true)}
-                  className="w-full rounded-xl border border-[var(--color-border)] px-4 py-3 font-medium transition-colors hover:border-[var(--color-free)] hover:text-[var(--color-free)]"
+                  className="w-full rounded-xl bg-white/5 px-4 py-3 font-medium backdrop-blur-md transition-colors hover:bg-[var(--color-free)]/15 hover:text-[var(--color-free)]"
                 >
                   Cerrar turno y arquear
                 </button>
@@ -257,9 +257,9 @@ export function CajaClient({
       {history.length > 0 ? (
         <section className="mt-8">
           <h2 className="mb-3 text-lg font-medium">Turnos cerrados</h2>
-          <div className="overflow-x-auto rounded-xl border border-[var(--color-border)]">
+          <div className="overflow-x-auto rounded-xl bg-white/5 backdrop-blur-xl">
             <table className="w-full text-sm">
-              <thead className="bg-[var(--color-surface)] text-left text-xs tracking-wide text-[var(--color-muted)] uppercase">
+              <thead className="bg-white/5 text-left text-xs tracking-wide text-[var(--color-muted)] uppercase">
                 <tr>
                   <th className="px-4 py-2.5 font-medium">Cierre</th>
                   <th className="px-4 py-2.5 font-medium">Cerró</th>
@@ -276,7 +276,7 @@ export function CajaClient({
                   return (
                     <tr
                       key={h.id}
-                      className="border-t border-[var(--color-border)]"
+                      className="border-t border-white/10"
                     >
                       <td className="px-4 py-3">
                         {h.closed_at ? fecha(h.closed_at) : "—"}

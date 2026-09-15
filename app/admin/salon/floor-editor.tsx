@@ -251,7 +251,7 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
                 type="button"
                 onClick={descartar}
                 disabled={isPending}
-                className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted)] disabled:opacity-50"
+                className="rounded-lg bg-white/5 px-3 py-2 text-sm text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-white/10 disabled:opacity-50"
               >
                 Descartar
               </button>
@@ -271,14 +271,14 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
       {error ? (
         <p
           role="alert"
-          className="mb-4 rounded-lg border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 px-3 py-2 text-sm text-[var(--color-danger)]"
+          className="mb-4 rounded-lg bg-[var(--color-danger)]/15 px-3 py-2 text-sm text-[var(--color-danger)] backdrop-blur-md"
         >
           {error}
         </p>
       ) : null}
 
       {/* Sectores */}
-      <div className="mb-3 flex flex-wrap items-center gap-1 border-b border-[var(--color-border)] pb-2">
+      <div className="mb-3 flex flex-wrap items-center gap-1 border-b border-white/10 pb-2">
         {sectors.map((s) => (
           <button
             key={s.id}
@@ -315,7 +315,7 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
               required
               autoFocus
               placeholder="Nombre del sector"
-              className="w-40 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 py-1.5 text-sm outline-none focus:border-[var(--color-accent)]"
+              className="w-40 rounded-lg bg-white/5 px-2.5 py-1.5 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
             />
             <button
               type="submit"
@@ -336,7 +336,7 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
           <button
             type="button"
             onClick={() => setNuevoSector(true)}
-            className="rounded-lg px-3 py-1.5 text-sm text-[var(--color-accent)] hover:bg-[var(--color-surface)]"
+            className="rounded-lg px-3 py-1.5 text-sm text-[var(--color-accent)] hover:bg-white/10"
           >
             + Sector
           </button>
@@ -347,7 +347,7 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
             type="button"
             onClick={agregarMesa}
             disabled={isPending || !sectorId}
-            className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-sm transition-colors hover:border-[var(--color-accent)] disabled:opacity-40"
+            className="rounded-lg bg-white/5 px-3 py-1.5 text-sm backdrop-blur-md transition-colors hover:bg-white/10 disabled:opacity-40"
           >
             + Mesa
           </button>
@@ -378,7 +378,7 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
           // ResizeObserver ajuste la escala), y esa franja quedaba asomando
           // por debajo del panel de la derecha.
           style={{ height: CANVAS_H * scale, contain: "paint" }}
-          className="min-w-0 overflow-x-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]"
+          className="min-w-0 overflow-x-auto rounded-2xl bg-white/5 backdrop-blur-xl"
         >
           {/* Caja con la medida ya escalada: el transform no encoge el div en
               el layout, y sin esto sobra plano para desplazar al costado. */}
@@ -409,10 +409,10 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
                     selected={t.id === selectedId}
                     label={`Mesa ${t.number}`}
                     title={ocupada ? "Mesa con cuenta abierta" : undefined}
-                    className={`cursor-grab active:cursor-grabbing ${
+                    className={`cursor-grab backdrop-blur-xl active:cursor-grabbing ${
                       ocupada
                         ? "border-[var(--color-busy)] bg-[var(--color-busy)]/20 text-[var(--color-busy)]"
-                        : "border-[var(--color-border)] bg-[var(--color-surface-2)] text-[var(--color-ink)]"
+                        : "border-transparent bg-white/10 text-[var(--color-ink)]"
                     }`}
                     onPointerDown={(e) => onPointerDown(e, t)}
                     onPointerMove={onPointerMove}
@@ -437,7 +437,7 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
         </div>
 
         {/* Panel de la mesa elegida */}
-        <aside className="min-w-0 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+        <aside className="min-w-0 rounded-2xl bg-white/5 p-4 shadow-lg shadow-black/10 backdrop-blur-xl">
           {selected === null ? (
             <div className="grid gap-3">
               <p className="text-sm text-[var(--color-muted)]">
@@ -446,7 +446,7 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
               </p>
 
               {sectorActual ? (
-                <div className="border-t border-[var(--color-border)] pt-3">
+                <div className="border-t border-white/10 pt-3">
                   <label className="grid gap-1">
                     <span className="text-xs text-[var(--color-muted)]">
                       Nombre del sector
@@ -460,7 +460,7 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
                           run(() => renameSector(sectorActual.id, valor));
                         }
                       }}
-                      className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+                      className="rounded-lg bg-white/5 px-3 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
                     />
                   </label>
 
@@ -479,7 +479,7 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
                         },
                       )
                     }
-                    className="mt-3 w-full rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted)] transition-colors hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:opacity-50"
+                    className="mt-3 w-full rounded-lg bg-white/5 px-3 py-2 text-sm text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-[var(--color-danger)]/15 hover:text-[var(--color-danger)] disabled:opacity-50"
                   >
                     Borrar sector
                   </button>
@@ -515,7 +515,7 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
                     const n = Math.max(1, Math.round(Number(e.target.value)));
                     patch(selected.id, { number: n || selected.number });
                   }}
-                  className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm tabular-nums outline-none focus:border-[var(--color-accent)]"
+                  className="rounded-lg bg-white/5 px-3 py-2 text-sm tabular-nums shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
                 />
                 {numeroRepetido ? (
                   <span className="text-xs text-[var(--color-danger)]">
@@ -537,7 +537,7 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
                   onBlur={(e) =>
                     patch(selected.id, { name: e.target.value.trim() || null })
                   }
-                  className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+                  className="rounded-lg bg-white/5 px-3 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
                 />
               </label>
 
@@ -557,7 +557,7 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
                           : selected.width,
                     });
                   }}
-                  className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+                  className="rounded-lg bg-white/5 px-3 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
                 >
                   {TABLE_SHAPES.map((s) => (
                     <option key={s} value={s}>
@@ -592,7 +592,7 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
                             : width,
                       });
                     }}
-                    className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm tabular-nums outline-none focus:border-[var(--color-accent)]"
+                    className="rounded-lg bg-white/5 px-3 py-2 text-sm tabular-nums shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
                   />
                 </label>
                 <label className="grid min-w-0 gap-1">
@@ -611,7 +611,7 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
                         height: clamp(Number(e.target.value) || 40, 40, 600),
                       })
                     }
-                    className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm tabular-nums outline-none focus:border-[var(--color-accent)] disabled:opacity-40"
+                    className="rounded-lg bg-white/5 px-3 py-2 text-sm tabular-nums shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10 disabled:opacity-40"
                   />
                 </label>
               </div>
@@ -653,10 +653,10 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
                       key={deg}
                       type="button"
                       onClick={() => patch(selected.id, { rotation: deg })}
-                      className={`flex-1 rounded-lg border px-2 py-1 text-xs ${
+                      className={`flex-1 rounded-lg px-2 py-1 text-xs backdrop-blur-md ${
                         selected.rotation === deg
-                          ? "border-[var(--color-accent)] text-[var(--color-accent)]"
-                          : "border-[var(--color-border)] text-[var(--color-muted)]"
+                          ? "bg-[var(--color-accent)]/15 text-[var(--color-accent)]"
+                          : "bg-white/5 text-[var(--color-muted)]"
                       }`}
                     >
                       {deg}°
@@ -674,7 +674,7 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
                   onChange={(e) =>
                     patch(selected.id, { sector_id: e.target.value || null })
                   }
-                  className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+                  className="rounded-lg bg-white/5 px-3 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
                 >
                   {sectors.map((s) => (
                     <option key={s.id} value={s.id}>
@@ -696,7 +696,7 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
                     },
                   )
                 }
-                className="mt-1 rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted)] transition-colors hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:opacity-50"
+                className="mt-1 rounded-lg bg-white/5 px-3 py-2 text-sm text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-[var(--color-danger)]/15 hover:text-[var(--color-danger)] disabled:opacity-50"
               >
                 Quitar mesa
               </button>

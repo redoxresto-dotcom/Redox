@@ -24,7 +24,7 @@ export function ImportPanel({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <div className="mb-4 rounded-xl border border-[var(--color-accent)]/40 bg-[var(--color-surface)] p-4">
+    <div className="mb-4 rounded-xl bg-white/5 p-4 shadow-xl shadow-black/30 backdrop-blur-xl">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="font-medium">Importar productos desde CSV</h2>
         <a
@@ -70,7 +70,7 @@ export function ImportPanel({ onDone }: { onDone: () => void }) {
           <button
             type="button"
             onClick={onDone}
-            className="rounded-lg border border-[var(--color-border)] px-4 py-2 text-sm text-[var(--color-muted)]"
+            className="rounded-lg bg-white/5 px-4 py-2 text-sm text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-white/10"
           >
             Cerrar
           </button>
@@ -80,14 +80,14 @@ export function ImportPanel({ onDone }: { onDone: () => void }) {
       {error ? (
         <p
           role="alert"
-          className="mt-3 rounded-lg border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 px-3 py-2 text-sm text-[var(--color-danger)]"
+          className="mt-3 rounded-lg bg-[var(--color-danger)]/15 px-3 py-2 text-sm text-[var(--color-danger)] backdrop-blur-md"
         >
           {error}
         </p>
       ) : null}
 
       {result && result.errores.length > 0 ? (
-        <div className="mt-3 rounded-lg border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 p-3 text-sm">
+        <div className="mt-3 rounded-lg bg-[var(--color-danger)]/15 p-3 text-sm backdrop-blur-md">
           <p className="font-medium text-[var(--color-danger)]">
             No se importó nada. Corregí estas filas y volvé a subir el archivo:
           </p>
@@ -103,7 +103,7 @@ export function ImportPanel({ onDone }: { onDone: () => void }) {
       ) : null}
 
       {result && result.errores.length === 0 ? (
-        <p className="mt-3 rounded-lg border border-[var(--color-free)]/40 bg-[var(--color-free)]/10 px-3 py-2 text-sm text-[var(--color-free)]">
+        <p className="mt-3 rounded-lg bg-[var(--color-free)]/15 px-3 py-2 text-sm text-[var(--color-free)] backdrop-blur-md">
           {result.creados} creado{result.creados === 1 ? "" : "s"} ·{" "}
           {result.actualizados} actualizado
           {result.actualizados === 1 ? "" : "s"} · {result.omitidos} omitido

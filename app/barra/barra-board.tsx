@@ -112,7 +112,7 @@ export function BarraBoard({
     return (
       <main className="mx-auto max-w-3xl px-4 py-6">
         <h1 className="text-2xl font-semibold">Ventas de barra</h1>
-        <p className="mt-4 rounded-2xl border border-[var(--color-busy)]/40 bg-[var(--color-busy)]/10 px-4 py-6 text-sm text-[var(--color-busy)]">
+        <p className="mt-4 rounded-2xl bg-[var(--color-busy)]/15 px-4 py-6 text-sm text-[var(--color-busy)] backdrop-blur-xl">
           Falta la mesa interna de barra. Corré la migración{" "}
           <code>027_barra_mesa_unica.sql</code> en Supabase.
         </p>
@@ -135,7 +135,7 @@ export function BarraBoard({
       </header>
 
       {!hasOpenShift ? (
-        <p className="mb-4 rounded-lg border border-[var(--color-busy)]/40 bg-[var(--color-busy)]/10 px-3 py-2 text-sm text-[var(--color-busy)]">
+        <p className="mb-4 rounded-lg bg-[var(--color-busy)]/15 px-3 py-2 text-sm text-[var(--color-busy)] backdrop-blur-md">
           No hay un turno de caja abierto. Se puede armar la venta, pero para
           cobrar hay que abrir la caja primero.
         </p>
@@ -144,7 +144,7 @@ export function BarraBoard({
       {error ? (
         <p
           role="alert"
-          className="mb-4 rounded-lg border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 px-3 py-2 text-sm text-[var(--color-danger)]"
+          className="mb-4 rounded-lg bg-[var(--color-danger)]/15 px-3 py-2 text-sm text-[var(--color-danger)] backdrop-blur-md"
         >
           {error}
         </p>
@@ -168,7 +168,7 @@ export function BarraBoard({
                   type="button"
                   disabled={isPending}
                   onClick={() => run(() => addDrink(mesa.id, p.id))}
-                  className="flex flex-col rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2 py-2 text-left text-sm transition-colors hover:border-[var(--color-accent)] disabled:opacity-50"
+                  className="flex flex-col rounded-lg bg-white/5 px-2 py-2 text-left text-sm backdrop-blur-md transition-colors hover:bg-white/10 disabled:opacity-50"
                 >
                   <span className="truncate font-medium">{p.name}</span>
                   <span className="text-xs text-[var(--color-muted)] tabular-nums">
@@ -181,7 +181,7 @@ export function BarraBoard({
         </section>
 
         {/* Ticket en curso */}
-        <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+        <section className="rounded-2xl bg-white/5 p-4 shadow-lg shadow-black/10 backdrop-blur-xl">
           <h2 className="mb-3 text-sm font-medium tracking-wide text-[var(--color-muted)] uppercase">
             Venta
           </h2>
@@ -208,7 +208,7 @@ export function BarraBoard({
                     disabled={isPending}
                     onClick={() => run(() => changeDrinkQty(it.id, -1))}
                     aria-label="Quitar una unidad"
-                    className="size-7 shrink-0 rounded-md border border-[var(--color-border)] text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)] disabled:opacity-40"
+                    className="size-7 shrink-0 rounded-md bg-white/5 text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-white/10 hover:text-[var(--color-ink)] disabled:opacity-40"
                   >
                     −
                   </button>
@@ -220,7 +220,7 @@ export function BarraBoard({
                     disabled={isPending}
                     onClick={() => run(() => changeDrinkQty(it.id, 1))}
                     aria-label="Sumar una unidad"
-                    className="size-7 shrink-0 rounded-md border border-[var(--color-border)] text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)] disabled:opacity-40"
+                    className="size-7 shrink-0 rounded-md bg-white/5 text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-white/10 hover:text-[var(--color-ink)] disabled:opacity-40"
                   >
                     +
                   </button>
@@ -229,7 +229,7 @@ export function BarraBoard({
                     disabled={isPending}
                     onClick={() => run(() => removeDrinkLine(it.id))}
                     aria-label="Quitar la línea"
-                    className="size-7 shrink-0 rounded-md border border-[var(--color-border)] text-[var(--color-muted)] transition-colors hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] disabled:opacity-40"
+                    className="size-7 shrink-0 rounded-md bg-white/5 text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-[var(--color-danger)]/15 hover:text-[var(--color-danger)] disabled:opacity-40"
                   >
                     ✕
                   </button>
@@ -238,7 +238,7 @@ export function BarraBoard({
             </ul>
           )}
 
-          <div className="mt-3 flex items-baseline justify-between border-t border-[var(--color-border)] pt-3">
+          <div className="mt-3 flex items-baseline justify-between border-t border-white/10 pt-3">
             <span className="text-sm text-[var(--color-muted)]">Total</span>
             <span className="text-lg font-semibold tabular-nums">
               {formatMoney(total)}
@@ -252,7 +252,7 @@ export function BarraBoard({
             <select
               value={pago}
               onChange={(e) => setPago(e.target.value as PaymentMethod)}
-              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+              className="rounded-lg bg-white/5 px-3 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
             >
               {PAYMENT_METHODS.map((m) => (
                 <option key={m} value={m}>
@@ -282,7 +282,7 @@ export function BarraBoard({
             <button
               type="button"
               onClick={() => setTicket(ticketData)}
-              className="mt-2 w-full rounded-lg border border-[var(--color-border)] px-4 py-2 text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)]"
+              className="mt-2 w-full rounded-lg bg-white/5 px-4 py-2 text-sm text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-white/10 hover:text-[var(--color-ink)]"
             >
               Ver ticket
             </button>

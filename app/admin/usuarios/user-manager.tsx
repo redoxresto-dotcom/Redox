@@ -78,7 +78,7 @@ export function UserManager({ profiles, me, emails }: Props) {
       {error ? (
         <p
           role="alert"
-          className="mb-4 rounded-lg border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 px-3 py-2 text-sm text-[var(--color-danger)]"
+          className="mb-4 rounded-lg bg-[var(--color-danger)]/15 px-3 py-2 text-sm text-[var(--color-danger)] backdrop-blur-md"
         >
           {error}
         </p>
@@ -87,7 +87,7 @@ export function UserManager({ profiles, me, emails }: Props) {
       {aviso ? (
         <p
           role="status"
-          className="mb-4 rounded-lg border border-[var(--color-free)]/40 bg-[var(--color-free)]/10 px-3 py-2 text-sm text-[var(--color-free)]"
+          className="mb-4 rounded-lg bg-[var(--color-free)]/15 px-3 py-2 text-sm text-[var(--color-free)] backdrop-blur-md"
         >
           {aviso}
         </p>
@@ -96,7 +96,7 @@ export function UserManager({ profiles, me, emails }: Props) {
       {creando ? (
         <form
           action={(fd) => run(() => createStaff(fd), () => setCreando(false))}
-          className="mb-4 grid gap-3 rounded-xl border border-[var(--color-accent)]/40 bg-[var(--color-surface)] p-4 sm:grid-cols-2"
+          className="mb-4 grid gap-3 rounded-xl bg-white/5 p-4 shadow-xl shadow-black/30 backdrop-blur-xl sm:grid-cols-2"
         >
           <label className="grid gap-1">
             <span className="text-xs text-[var(--color-muted)]">Nombre</span>
@@ -104,7 +104,7 @@ export function UserManager({ profiles, me, emails }: Props) {
               name="full_name"
               required
               autoFocus
-              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+              className="rounded-lg bg-white/5 px-3 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
             />
           </label>
 
@@ -117,7 +117,7 @@ export function UserManager({ profiles, me, emails }: Props) {
               required
               autoComplete="off"
               placeholder="6 a 8 dígitos"
-              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+              className="rounded-lg bg-white/5 px-3 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
             />
           </label>
 
@@ -131,7 +131,7 @@ export function UserManager({ profiles, me, emails }: Props) {
               required
               minLength={8}
               autoComplete="new-password"
-              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+              className="rounded-lg bg-white/5 px-3 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
             />
           </label>
 
@@ -140,7 +140,7 @@ export function UserManager({ profiles, me, emails }: Props) {
             <select
               name="role"
               defaultValue={roles[0] ?? "mozo"}
-              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+              className="rounded-lg bg-white/5 px-3 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
             >
               {roles.map((r) => (
                 <option key={r} value={r}>
@@ -166,9 +166,9 @@ export function UserManager({ profiles, me, emails }: Props) {
         </form>
       ) : null}
 
-      <div className="overflow-x-auto rounded-xl border border-[var(--color-border)]">
+      <div className="overflow-x-auto rounded-xl bg-white/5 backdrop-blur-xl">
         <table className="w-full text-sm">
-          <thead className="bg-[var(--color-surface)] text-left text-xs tracking-wide text-[var(--color-muted)] uppercase">
+          <thead className="bg-white/5 text-left text-xs tracking-wide text-[var(--color-muted)] uppercase">
             <tr>
               <th className="px-4 py-2.5 font-medium">Nombre</th>
               <th className="px-4 py-2.5 font-medium">Documento</th>
@@ -185,7 +185,7 @@ export function UserManager({ profiles, me, emails }: Props) {
               return (
                 <tr
                   key={p.id}
-                  className={`border-t border-[var(--color-border)] ${
+                  className={`border-t border-white/10 ${
                     p.active ? "" : "opacity-50"
                   }`}
                 >
@@ -223,7 +223,7 @@ export function UserManager({ profiles, me, emails }: Props) {
                           autoComplete="off"
                           placeholder="Documento"
                           defaultValue={p.document ?? ""}
-                          className="w-32 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2 py-1 text-sm tabular-nums outline-none focus:border-[var(--color-accent)]"
+                          className="w-32 rounded-lg bg-white/5 px-2 py-1 text-sm tabular-nums shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
                         />
                         <button
                           type="submit"
@@ -278,7 +278,7 @@ export function UserManager({ profiles, me, emails }: Props) {
                             changeRole(p.id, e.target.value as StaffRole)
                           )
                         }
-                        className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2 py-1 text-sm outline-none focus:border-[var(--color-accent)]"
+                        className="rounded-lg bg-white/5 px-2 py-1 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
                       >
                         {roles.map((r) => (
                           <option key={r} value={r}>
@@ -334,7 +334,7 @@ export function UserManager({ profiles, me, emails }: Props) {
                             autoFocus
                             autoComplete="off"
                             placeholder="Contraseña nueva"
-                            className="w-44 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2 py-1 text-sm outline-none focus:border-[var(--color-accent)]"
+                            className="w-44 rounded-lg bg-white/5 px-2 py-1 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
                           />
                           <button
                             type="submit"

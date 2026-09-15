@@ -133,7 +133,7 @@ export default async function ReportesPage({
               type="date"
               name="desde"
               defaultValue={range.desde}
-              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+              className="rounded-lg bg-white/5 px-3 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
             />
           </label>
           <label className="grid gap-1">
@@ -142,7 +142,7 @@ export default async function ReportesPage({
               type="date"
               name="hasta"
               defaultValue={range.hasta}
-              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+              className="rounded-lg bg-white/5 px-3 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
             />
           </label>
           <button
@@ -329,7 +329,7 @@ export default async function ReportesPage({
               </ul>
 
               {sinVentas.length > 0 ? (
-                <div className="mt-4 border-t border-[var(--color-border)] pt-3">
+                <div className="mt-4 border-t border-white/10 pt-3">
                   <p className="mb-1.5 text-xs tracking-wide text-[var(--color-muted)] uppercase">
                     Sin una sola venta en el período
                   </p>
@@ -360,7 +360,7 @@ export default async function ReportesPage({
                 ))}
               </ul>
 
-              <div className="mt-4 overflow-x-auto border-t border-[var(--color-border)] pt-3">
+              <div className="mt-4 overflow-x-auto border-t border-white/10 pt-3">
                 <table className="w-full min-w-[420px] text-sm">
                   <thead>
                     <tr className="text-left text-xs tracking-wide text-[var(--color-muted)] uppercase">
@@ -378,7 +378,7 @@ export default async function ReportesPage({
                     {mozos.map((m) => (
                       <tr
                         key={m.waiter_id ?? "sin-mozo"}
-                        className="border-t border-[var(--color-border)]"
+                        className="border-t border-white/10"
                       >
                         <td className="py-1.5">{m.waiter_name}</td>
                         <td className="py-1.5 text-right tabular-nums">
@@ -416,7 +416,7 @@ export default async function ReportesPage({
               {cancelados.map((c) => (
                 <li
                   key={c.order_id}
-                  className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-[var(--color-border)] pb-2 text-sm last:border-0 last:pb-0"
+                  className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-white/10 pb-2 text-sm last:border-0 last:pb-0"
                 >
                   <span className="min-w-0">
                     <span className="font-medium">
@@ -484,7 +484,7 @@ export default async function ReportesPage({
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+    <div className="rounded-xl bg-white/5 p-4 shadow-lg shadow-black/10 backdrop-blur-xl">
       <p className="text-xs tracking-wide text-[var(--color-muted)] uppercase">
         {label}
       </p>
@@ -504,7 +504,7 @@ function Card({
 }) {
   return (
     <section
-      className={`rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-5 ${
+      className={`rounded-2xl bg-white/5 p-5 shadow-lg shadow-black/10 backdrop-blur-xl ${
         wide ? "lg:col-span-2" : ""
       }`}
     >
@@ -569,7 +569,7 @@ function Exportar({
   return (
     <a
       href={`/admin/reportes/export?${query}`}
-      className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted)] transition-colors hover:border-[var(--color-accent)] hover:text-[var(--color-ink)]"
+      className="rounded-lg bg-white/5 px-3 py-2 text-sm text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-white/10 hover:text-[var(--color-ink)]"
     >
       ↓ {label}
     </a>

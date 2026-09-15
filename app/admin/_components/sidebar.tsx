@@ -114,6 +114,21 @@ export function Sidebar({
 
   return (
     <div className="flex min-h-screen">
+      {/*
+        Manchas de color difuminadas, fijas detrás de todo el panel: sin esto,
+        el vidrio (backdrop-blur + fondos translúcidos) de cada pantalla no
+        tiene nada que revelar y se ve como una caja gris apagada. Vive acá,
+        una sola vez, porque el Sidebar envuelve todas las pantallas de /admin.
+      */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
+      >
+        <div className="absolute -top-32 -left-32 size-[28rem] rounded-full bg-[var(--color-accent)]/15 blur-[110px]" />
+        <div className="absolute top-1/3 -right-40 size-[26rem] rounded-full bg-[var(--color-brand)]/20 blur-[110px]" />
+        <div className="absolute bottom-0 left-1/3 size-[24rem] rounded-full bg-[var(--color-free)]/10 blur-[110px]" />
+      </div>
+
       {/* Fondo oscuro detrás del menú del celular: tocarlo lo cierra. */}
       {mobileOpen ? (
         <div
@@ -124,11 +139,11 @@ export function Sidebar({
       ) : null}
 
       <aside
-        className={`fixed top-0 left-0 z-40 flex h-screen w-72 flex-col border-r border-[var(--color-border)] bg-[var(--color-surface)] backdrop-blur transition-transform duration-200 md:sticky md:z-30 md:translate-x-0 md:bg-[var(--color-surface)]/60 md:transition-[width] ${
+        className={`fixed top-0 left-0 z-40 flex h-screen w-72 flex-col bg-[var(--color-surface)]/60 shadow-xl shadow-black/30 backdrop-blur-xl transition-transform duration-200 md:sticky md:z-30 md:translate-x-0 md:bg-[var(--color-surface)]/40 md:transition-[width] ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         } ${collapsed ? "md:w-[76px]" : "md:w-64"}`}
       >
-        <div className="flex items-center gap-2 border-b border-[var(--color-border)] px-4 py-4">
+        <div className="flex items-center gap-2 border-b border-white/10 px-4 py-4">
           <Link
             href="/admin"
             aria-label="Redox"
@@ -198,7 +213,7 @@ export function Sidebar({
           </ul>
         </nav>
 
-        <div className="border-t border-[var(--color-border)] p-3">
+        <div className="border-t border-white/10 p-3">
           <div
             className={`flex items-center gap-2.5 rounded-lg px-2 py-2 ${
               collapsed ? "md:justify-center" : ""
@@ -234,7 +249,7 @@ export function Sidebar({
 
       <div className="min-w-0 flex-1">
         {/* Barra del celular: el menú entero se guarda atrás de este botón. */}
-        <div className="sticky top-0 z-20 flex items-center gap-3 border-b border-[var(--color-border)] bg-[var(--color-bg)]/95 px-4 py-3 backdrop-blur md:hidden">
+        <div className="sticky top-0 z-20 flex items-center gap-3 bg-[var(--color-bg)]/70 px-4 py-3 shadow-lg shadow-black/20 backdrop-blur-xl md:hidden">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}

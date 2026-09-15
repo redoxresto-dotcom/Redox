@@ -46,7 +46,7 @@ export default async function EstacionesPage() {
           <li key={station}>
             <Link
               href={`/estacion/${station}`}
-              className="flex flex-col gap-1 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 transition-colors hover:border-[var(--color-accent)]"
+              className="flex flex-col gap-1 rounded-2xl bg-white/5 p-6 shadow-lg shadow-black/10 backdrop-blur-xl transition-colors hover:bg-white/10"
             >
               <span className="text-xl font-semibold">
                 {STATION_LABELS[station]}

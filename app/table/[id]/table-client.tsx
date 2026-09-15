@@ -317,6 +317,53 @@ function Carta({ menu, onClose }: { menu: MenuItem[]; onClose: () => void }) {
         : [];
   const tituloVista = categorias.find((c) => c.id === vista)?.titulo ?? "";
 
+  // Referencias con el valor más reciente: el listener de popstate se
+  // registra una sola vez (al montar) y necesita leer el estado actual sin
+  // quedar atado al closure de ese primer render.
+  const detalleRef = useRef(detalle);
+  detalleRef.current = detalle;
+  const buscandoRef = useRef(buscando);
+  buscandoRef.current = buscando;
+  const vistaRef = useRef(vista);
+  vistaRef.current = vista;
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const cerrandoTodoRef = useRef(false);
+
+  // Atrapa la flecha "atrás" del navegador para que no saque al cliente de
+  // la app: apila una entrada de historial al abrir la carta y, en cada
+  // popstate, deshace un paso (detalle > búsqueda > categoría > cerrar). Si
+  // todavía queda algo abierto, vuelve a apilar para atrapar el próximo
+  // "atrás"; si no queda nada, deja que la navegación real cierre la carta.
+  useEffect(() => {
+    window.history.pushState({ redoxCarta: true }, "");
+
+    function onPopState() {
+      if (cerrandoTodoRef.current) {
+        cerrandoTodoRef.current = false;
+        onCloseRef.current();
+        return;
+      }
+      if (detalleRef.current) setDetalle(null);
+      else if (buscandoRef.current) setBusqueda("");
+      else if (vistaRef.current) setVista(null);
+      else {
+        onCloseRef.current();
+        return;
+      }
+      window.history.pushState({ redoxCarta: true }, "");
+    }
+
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  /** Cierra la carta entera (✕ o Escape desde el selector), consumiendo la entrada atrapada. */
+  function cerrar() {
+    cerrandoTodoRef.current = true;
+    window.history.back();
+  }
+
   // Escape: primero cierra el detalle, después borra la búsqueda, después
   // vuelve al selector, después cierra la carta.
   useEffect(() => {
@@ -325,11 +372,11 @@ function Carta({ menu, onClose }: { menu: MenuItem[]; onClose: () => void }) {
       if (detalle) setDetalle(null);
       else if (buscando) setBusqueda("");
       else if (vista) setVista(null);
-      else onClose();
+      else cerrar();
     }
     window.addEventListener("keydown", onEsc);
     return () => window.removeEventListener("keydown", onEsc);
-  }, [detalle, buscando, vista, onClose]);
+  }, [detalle, buscando, vista]);
 
   // El fondo no se desplaza detrás de la carta mientras está abierta.
   useEffect(() => {
@@ -388,7 +435,7 @@ function Carta({ menu, onClose }: { menu: MenuItem[]; onClose: () => void }) {
         )}
         <button
           type="button"
-          onClick={onClose}
+          onClick={cerrar}
           aria-label="Cerrar la carta"
           className="ml-auto grid size-9 place-items-center rounded-full bg-white/10 text-sm text-[var(--color-muted)] backdrop-blur-md active:bg-white/20"
         >

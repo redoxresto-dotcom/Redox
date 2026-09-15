@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
-import { requireAdmin, requireStaff } from "@/lib/auth";
 import { isPaymentMethod, type PaymentMethod } from "@/lib/types";
 
 export type ActionResult = { error: string | null };
@@ -12,11 +11,17 @@ const OK: ActionResult = { error: null };
 /**
  * Todas las acciones del salón corren con la sesión del mozo, así que la RLS
  * sigue vigente: la UI puede equivocarse, la base no deja pasar nada indebido.
+ *
+ * A propósito, ninguna arranca con requireStaff()/requireAdmin(): ese chequeo
+ * hace dos viajes de red (auth.getUser() + select a profiles) antes de tocar
+ * un dato, y acá la barrera real ya es otra — la RLS de cada tabla, o el
+ * propio RPC que valida con auth.uid()/is_admin() adentro de la base (ver
+ * migraciones 020, 032 y 033). Repetir la validación del lado de la app solo
+ * sumaba latencia sin sumar seguridad.
  */
 
 /** Abre (o recupera) la cuenta de una mesa y la marca como ocupada. */
 export async function openTable(tableId: string): Promise<ActionResult> {
-  await requireStaff();
   const supabase = await getSupabaseServerClient();
 
   const { error } = await supabase.rpc("open_table_order", {
@@ -40,7 +45,6 @@ export async function addProductToTable(
   tableId: string,
   productId: string,
 ): Promise<ActionResult> {
-  await requireStaff();
   const supabase = await getSupabaseServerClient();
 
   // Un solo viaje a la base: abrir la cuenta, traer el producto, buscar la
@@ -59,53 +63,23 @@ export async function addProductToTable(
   return OK;
 }
 
-/** Suma o resta unidades. Al llegar a cero, borra la línea. */
+/**
+ * Suma o resta unidades. Al llegar a cero, borra la línea.
+ *
+ * Un solo viaje a la base: antes eran hasta cuatro (leer la línea, más el
+ * insert/update/delete correspondiente), sobre el botón que más se toca de
+ * toda la pantalla.
+ */
 export async function changeItemQuantity(
   itemId: string,
   delta: number,
 ): Promise<ActionResult> {
-  const profile = await requireStaff();
   const supabase = await getSupabaseServerClient();
 
-  const { data: item, error: readError } = await supabase
-    .from("order_items")
-    .select("id, quantity, status, order_id, product_id, unit_price, unit_cost")
-    .eq("id", itemId)
-    .single();
-
-  if (readError || !item) return { error: "La línea ya no existe." };
-
-  // Sumar sobre una línea que la estación ya preparó la dejaría invisible para
-  // la pantalla: la unidad nueva abre su propia comanda, al mismo precio que
-  // el resto de la vuelta.
-  if (delta > 0 && item.status !== "pedido") {
-    const { error } = await supabase.from("order_items").insert({
-      order_id: item.order_id,
-      product_id: item.product_id,
-      quantity: delta,
-      unit_price: item.unit_price,
-      unit_cost: item.unit_cost,
-      subtotal: 0, // lo calcula el trigger
-      created_by: profile.id,
-    });
-
-    if (error)
-      return { error: "No se pudo cargar el producto: " + error.message };
-
-    revalidatePath("/admin");
-    revalidatePath("/estacion", "layout");
-    return OK;
-  }
-
-  const next = item.quantity + delta;
-
-  const { error } =
-    next <= 0
-      ? await supabase.from("order_items").delete().eq("id", itemId)
-      : await supabase
-          .from("order_items")
-          .update({ quantity: next })
-          .eq("id", itemId);
+  const { error } = await supabase.rpc("change_order_item_quantity", {
+    p_item_id: itemId,
+    p_delta: delta,
+  });
 
   if (error) return { error: "No se pudo actualizar: " + error.message };
 
@@ -116,7 +90,6 @@ export async function changeItemQuantity(
 
 /** Quita una línea completa de la cuenta. */
 export async function removeItem(itemId: string): Promise<ActionResult> {
-  await requireStaff();
   const supabase = await getSupabaseServerClient();
 
   const { error } = await supabase
@@ -141,8 +114,6 @@ export async function closeOrder(
   orderId: string,
   paymentMethod: PaymentMethod,
 ): Promise<ActionResult> {
-  await requireStaff();
-
   if (!isPaymentMethod(paymentMethod)) {
     return { error: "Medio de pago desconocido." };
   }
@@ -186,7 +157,6 @@ export async function cancelOrder(
   orderId: string,
   reason?: string,
 ): Promise<ActionResult> {
-  await requireStaff();
   const supabase = await getSupabaseServerClient();
 
   const { error } = await supabase.rpc("cancel_table_order", {
@@ -212,7 +182,6 @@ export async function cancelOrder(
  * La regla vive en el RPC, así que tampoco alcanza con saltear la pantalla.
  */
 export async function releaseTable(tableId: string): Promise<ActionResult> {
-  await requireAdmin();
   const supabase = await getSupabaseServerClient();
 
   const { error } = await supabase.rpc("release_table", {
@@ -244,13 +213,9 @@ export async function releaseTable(tableId: string): Promise<ActionResult> {
  * la mesa a un compañero.
  */
 export async function takeTable(tableId: string): Promise<ActionResult> {
-  const profile = await requireStaff();
   const supabase = await getSupabaseServerClient();
 
-  const { error } = await supabase
-    .from("tables")
-    .update({ assigned_waiter: profile.id })
-    .eq("id", tableId);
+  const { error } = await supabase.rpc("take_table", { p_table_id: tableId });
 
   if (error) return { error: traducirMesa(error.message) };
 
@@ -268,8 +233,6 @@ export async function transferTable(
   tableId: string,
   toWaiterId: string,
 ): Promise<ActionResult> {
-  await requireStaff();
-
   if (!toWaiterId) return { error: "Elegí a quién le pasás la mesa." };
 
   const supabase = await getSupabaseServerClient();
@@ -312,7 +275,6 @@ function traducirMesa(mensaje: string): string {
  * mesa queda pronta para siempre y el cartel deja de querer decir algo.
  */
 export async function deliverItem(itemId: string): Promise<ActionResult> {
-  await requireStaff();
   const supabase = await getSupabaseServerClient();
 
   const { error } = await supabase
@@ -331,7 +293,6 @@ export async function deliverItem(itemId: string): Promise<ActionResult> {
 
 /** Todo lo que estaba pronto en esa mesa se fue junto en una bandeja. */
 export async function deliverTable(tableId: string): Promise<ActionResult> {
-  await requireStaff();
   const supabase = await getSupabaseServerClient();
 
   const { data: order } = await supabase
@@ -359,7 +320,6 @@ export async function deliverTable(tableId: string): Promise<ActionResult> {
 
 /** Marca una alerta del cliente como atendida. */
 export async function resolveAlert(alertId: string): Promise<ActionResult> {
-  await requireStaff();
   const supabase = await getSupabaseServerClient();
 
   const { error } = await supabase

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import sharp from "sharp";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 import { normalizarClave, parseCsv, parseNumeroLatam } from "@/lib/csv";
@@ -140,6 +141,10 @@ const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif
  * nueva una vez que el insert/update de `products` confirma), y no hay que
  * lidiar con nombres repetidos entre productos con el mismo nombre.
  */
+/** Ancho máximo de una foto de producto: de sobra para una tarjeta de carta. */
+const IMAGE_MAX_WIDTH = 1000;
+const IMAGE_QUALITY = 80;
+
 async function uploadProductImage(
   supabase: Awaited<ReturnType<typeof getSupabaseServerClient>>,
   file: File,
@@ -151,12 +156,25 @@ async function uploadProductImage(
     return { error: "La imagen no puede pesar más de 5 MB." };
   }
 
-  const ext = file.type.split("/")[1] === "jpeg" ? "jpg" : file.type.split("/")[1];
-  const path = `${crypto.randomUUID()}.${ext}`;
+  // Se reduce a un ancho de carta y se recomprime a WebP acá, una sola vez al
+  // subirla, en vez de que cada celular descargue la foto tal como salió de
+  // la cámara cada vez que alguien abre la mesa o el catálogo.
+  let processed: Buffer;
+  try {
+    processed = await sharp(Buffer.from(await file.arrayBuffer()))
+      .rotate()
+      .resize({ width: IMAGE_MAX_WIDTH, withoutEnlargement: true })
+      .webp({ quality: IMAGE_QUALITY })
+      .toBuffer();
+  } catch {
+    return { error: "No se pudo procesar la imagen." };
+  }
+
+  const path = `${crypto.randomUUID()}.webp`;
 
   const { error } = await supabase.storage
     .from("product-images")
-    .upload(path, file, { contentType: file.type });
+    .upload(path, processed, { contentType: "image/webp" });
   if (error) return { error: "No se pudo subir la imagen: " + error.message };
 
   const { data } = supabase.storage.from("product-images").getPublicUrl(path);

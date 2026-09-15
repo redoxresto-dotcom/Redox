@@ -1,6 +1,13 @@
 "use client";
 
-import { useMemo, useState, useTransition, type ChangeEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+  type ChangeEvent,
+} from "react";
 import {
   createProduct,
   deleteProduct,
@@ -44,8 +51,16 @@ export function CatalogManager({
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [isPending, startTransition] = useTransition();
+  const editPanelRef = useRef<HTMLDivElement>(null);
 
   const hoy = hoyMontevideo();
+  const editingProduct = products.find((p) => p.id === editingId) ?? null;
+
+  // El panel de edición vive arriba de la tabla, no en la fila: si la lista
+  // es larga y la mesa está lejos del tope, tocar "Editar" igual lo muestra.
+  useEffect(() => {
+    if (editingId) editPanelRef.current?.scrollIntoView({ block: "nearest" });
+  }, [editingId]);
 
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -140,6 +155,31 @@ export function CatalogManager({
         </div>
       ) : null}
 
+      {editingProduct ? (
+        <div
+          ref={editPanelRef}
+          className="mb-4 rounded-xl border border-[var(--color-accent)]/40 bg-[var(--color-surface)] p-4"
+        >
+          <p className="mb-3 text-xs font-semibold tracking-wide text-[var(--color-muted)] uppercase">
+            Editando «{editingProduct.name}»
+          </p>
+          <ProductForm
+            product={editingProduct}
+            products={products}
+            comboItems={comboItems[editingProduct.id]}
+            disabled={isPending}
+            onSubmit={(formData) =>
+              run(
+                () => updateProduct(editingProduct.id, formData),
+                () => setEditingId(null)
+              )
+            }
+            onCancel={() => setEditingId(null)}
+            submitLabel="Guardar"
+          />
+        </div>
+      ) : null}
+
       <div className="overflow-x-auto rounded-xl border border-[var(--color-border)]">
         <table className="w-full text-sm">
           <thead className="bg-[var(--color-surface)] text-left text-xs tracking-wide text-[var(--color-muted)] uppercase">
@@ -173,28 +213,13 @@ export function CatalogManager({
                   <tr
                     key={product.id}
                     className={`border-t border-[var(--color-border)] ${
-                      product.active ? "" : "opacity-45"
+                      isEditing
+                        ? "bg-[var(--color-accent)]/5"
+                        : product.active
+                          ? ""
+                          : "opacity-45"
                     }`}
                   >
-                    {isEditing ? (
-                      <td colSpan={8} className="bg-[var(--color-surface)] px-4 py-4">
-                        <ProductForm
-                          product={product}
-                          products={products}
-                          comboItems={comboItems[product.id]}
-                          disabled={isPending}
-                          onSubmit={(formData) =>
-                            run(
-                              () => updateProduct(product.id, formData),
-                              () => setEditingId(null)
-                            )
-                          }
-                          onCancel={() => setEditingId(null)}
-                          submitLabel="Guardar"
-                        />
-                      </td>
-                    ) : (
-                      <>
                         <td className="px-4 py-3">
                           <div className="flex items-start gap-2">
                             {product.image_url ? (
@@ -296,13 +321,17 @@ export function CatalogManager({
                               type="button"
                               disabled={isPending}
                               onClick={() => {
-                                setEditingId(product.id);
+                                setEditingId(isEditing ? null : product.id);
                                 setCreating(false);
                                 setError(null);
                               }}
-                              className="rounded-lg px-2.5 py-1 text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)] disabled:opacity-50"
+                              className={`rounded-lg px-2.5 py-1 transition-colors disabled:opacity-50 ${
+                                isEditing
+                                  ? "text-[var(--color-accent)]"
+                                  : "text-[var(--color-muted)] hover:text-[var(--color-ink)]"
+                              }`}
                             >
-                              Editar
+                              {isEditing ? "Editando…" : "Editar"}
                             </button>
                             {product.active ? (
                               <button
@@ -327,8 +356,6 @@ export function CatalogManager({
                             )}
                           </div>
                         </td>
-                      </>
-                    )}
                   </tr>
                 );
               })

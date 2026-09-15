@@ -180,18 +180,26 @@ export function CatalogManager({
         </div>
       ) : null}
 
+      {/*
+        table-fixed + anchos en % para que las 8 columnas siempre entren en el
+        ancho disponible: con table-layout auto (el default), el navegador le
+        daba a cada columna lo que su contenido más ancho pedía y la suma se
+        pasaba de la pantalla, obligando a scrollear para llegar a "Quitar".
+        Acá el contenido angosto (precios, badges) se corta con truncate en
+        vez de estirar la tabla.
+      */}
       <div className="overflow-x-auto rounded-xl border border-[var(--color-border)]">
-        <table className="w-full text-sm">
+        <table className="w-full table-fixed text-sm">
           <thead className="bg-[var(--color-surface)] text-left text-xs tracking-wide text-[var(--color-muted)] uppercase">
             <tr>
-              <th className="px-4 py-2.5 font-medium">Producto</th>
-              <th className="px-4 py-2.5 font-medium">Categoría</th>
-              <th className="px-4 py-2.5 font-medium">Estación</th>
-              <th className="px-4 py-2.5 font-medium">Carta</th>
-              <th className="px-4 py-2.5 text-right font-medium">Venta</th>
-              <th className="px-4 py-2.5 text-right font-medium">Costo</th>
-              <th className="px-4 py-2.5 text-right font-medium">Margen</th>
-              <th className="px-4 py-2.5" />
+              <th className="w-[21%] truncate px-3 py-2.5 font-medium">Producto</th>
+              <th className="w-[9%] truncate px-3 py-2.5 font-medium">Categoría</th>
+              <th className="w-[11%] truncate px-3 py-2.5 font-medium">Estación</th>
+              <th className="w-[7%] truncate px-3 py-2.5 font-medium">Carta</th>
+              <th className="w-[9%] truncate px-3 py-2.5 text-right font-medium">Venta</th>
+              <th className="w-[9%] truncate px-3 py-2.5 text-right font-medium">Costo</th>
+              <th className="w-[9%] truncate px-3 py-2.5 text-right font-medium">Margen</th>
+              <th className="w-[25%] px-3 py-2.5" />
             </tr>
           </thead>
           <tbody>
@@ -199,7 +207,7 @@ export function CatalogManager({
               <tr>
                 <td
                   colSpan={8}
-                  className="px-4 py-10 text-center text-[var(--color-muted)]"
+                  className="px-3 py-10 text-center text-[var(--color-muted)]"
                 >
                   {search ? "Ningún producto coincide." : "El catálogo está vacío."}
                 </td>
@@ -220,7 +228,7 @@ export function CatalogManager({
                           : "opacity-45"
                     }`}
                   >
-                        <td className="px-4 py-3">
+                        <td className="px-3 py-3">
                           <div className="flex items-start gap-2">
                             {product.image_url ? (
                               // eslint-disable-next-line @next/next/no-img-element
@@ -273,12 +281,12 @@ export function CatalogManager({
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-[var(--color-muted)]">
+                        <td className="truncate px-3 py-3 text-[var(--color-muted)]">
                           {CATEGORY_LABELS[product.category]}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="truncate px-3 py-3">
                           <span
-                            className={`rounded-full px-2 py-0.5 text-xs ${
+                            className={`inline-block max-w-full truncate rounded-full px-2 py-0.5 text-xs ${
                               product.station === "cocina"
                                 ? "bg-[var(--color-busy)]/15 text-[var(--color-busy)]"
                                 : product.station === "barra"
@@ -289,7 +297,7 @@ export function CatalogManager({
                             {STATION_LABELS[product.station]}
                           </span>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="truncate px-3 py-3">
                           {product.in_menu ? (
                             <span className="text-[var(--color-free)]" title="Se muestra en la carta del QR">
                               ✓
@@ -300,14 +308,14 @@ export function CatalogManager({
                             </span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums">
+                        <td className="truncate px-3 py-3 text-right tabular-nums">
                           {formatMoney(product.price)}
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums text-[var(--color-muted)]">
+                        <td className="truncate px-3 py-3 text-right tabular-nums text-[var(--color-muted)]">
                           {formatMoney(product.cost)}
                         </td>
                         <td
-                          className={`px-4 py-3 text-right tabular-nums ${
+                          className={`truncate px-3 py-3 text-right tabular-nums ${
                             m !== null && m < 30
                               ? "text-[var(--color-busy)]"
                               : "text-[var(--color-free)]"
@@ -315,8 +323,13 @@ export function CatalogManager({
                         >
                           {m === null ? "—" : `${m.toFixed(0)}%`}
                         </td>
-                        <td className="px-4 py-3">
-                          <div className="flex justify-end gap-1">
+                        <td className="px-3 py-3">
+                          {/*
+                            flex-wrap en vez de nowrap: si "Editar" y "Quitar"
+                            no entran en una sola línea, "Quitar" pasa a la de
+                            abajo en vez de desbordar por encima de "Margen".
+                          */}
+                          <div className="flex flex-wrap justify-end gap-x-1 gap-y-0.5">
                             <button
                               type="button"
                               disabled={isPending}
@@ -325,7 +338,7 @@ export function CatalogManager({
                                 setCreating(false);
                                 setError(null);
                               }}
-                              className={`rounded-lg px-2.5 py-1 transition-colors disabled:opacity-50 ${
+                              className={`rounded-lg px-2 py-1 whitespace-nowrap transition-colors disabled:opacity-50 ${
                                 isEditing
                                   ? "text-[var(--color-accent)]"
                                   : "text-[var(--color-muted)] hover:text-[var(--color-ink)]"
@@ -338,7 +351,7 @@ export function CatalogManager({
                                 type="button"
                                 disabled={isPending}
                                 onClick={() => run(() => deleteProduct(product.id))}
-                                className="rounded-lg px-2.5 py-1 text-[var(--color-muted)] transition-colors hover:text-[var(--color-danger)] disabled:opacity-50"
+                                className="rounded-lg px-2 py-1 whitespace-nowrap text-[var(--color-muted)] transition-colors hover:text-[var(--color-danger)] disabled:opacity-50"
                               >
                                 Quitar
                               </button>
@@ -349,7 +362,7 @@ export function CatalogManager({
                                 onClick={() =>
                                   run(() => reactivateProduct(product.id))
                                 }
-                                className="rounded-lg px-2.5 py-1 text-[var(--color-muted)] transition-colors hover:text-[var(--color-free)] disabled:opacity-50"
+                                className="rounded-lg px-2 py-1 whitespace-nowrap text-[var(--color-muted)] transition-colors hover:text-[var(--color-free)] disabled:opacity-50"
                               >
                                 Reactivar
                               </button>

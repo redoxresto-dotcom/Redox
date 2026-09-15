@@ -431,7 +431,13 @@ function Carta({ menu, onClose }: { menu: MenuItem[]; onClose: () => void }) {
             ‹ Categorías
           </button>
         ) : (
-          <h2 className="text-lg font-semibold">Carta</h2>
+          <button
+            type="button"
+            onClick={cerrar}
+            className="flex items-center gap-1 text-sm font-medium text-[var(--color-brand-soft)]"
+          >
+            ‹ Menú principal
+          </button>
         )}
         <button
           type="button"

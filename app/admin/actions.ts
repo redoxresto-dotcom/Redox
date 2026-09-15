@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { requireAdmin, requireStaff } from "@/lib/auth";
-import { comboVigente, isPaymentMethod, type PaymentMethod } from "@/lib/types";
+import { isPaymentMethod, type PaymentMethod } from "@/lib/types";
 
 export type ActionResult = { error: string | null };
 
@@ -40,60 +40,16 @@ export async function addProductToTable(
   tableId: string,
   productId: string,
 ): Promise<ActionResult> {
-  const profile = await requireStaff();
+  await requireStaff();
   const supabase = await getSupabaseServerClient();
 
-  const { data: orderId, error: rpcError } = await supabase.rpc(
-    "open_table_order",
-    { p_table_id: tableId },
-  );
-
-  if (rpcError || !orderId) {
-    return {
-      error: "No se pudo abrir la cuenta: " + (rpcError?.message ?? ""),
-    };
-  }
-
-  const { data: product, error: prodError } = await supabase
-    .from("products")
-    .select("id, price, cost, is_combo, combo_valid_from, combo_valid_until")
-    .eq("id", productId)
-    .single();
-
-  if (prodError || !product) return { error: "Producto no encontrado." };
-
-  if (product.is_combo && !comboVigente(product)) {
-    return { error: "Ese combo está fuera de vigencia." };
-  }
-
-  // Se suma sobre una línea existente solo si la estación todavía no la tomó.
-  // Si el trago ya está en preparación o servido, la unidad nueva va en una
-  // línea aparte: sumando sobre la vieja, la barra nunca se entera de que le
-  // pidieron otro.
-  const { data: existing } = await supabase
-    .from("order_items")
-    .select("id, quantity")
-    .eq("order_id", orderId)
-    .eq("product_id", productId)
-    .eq("status", "pedido")
-    .order("created_at")
-    .limit(1)
-    .maybeSingle();
-
-  const { error } = existing
-    ? await supabase
-        .from("order_items")
-        .update({ quantity: existing.quantity + 1 })
-        .eq("id", existing.id)
-    : await supabase.from("order_items").insert({
-        order_id: orderId,
-        product_id: product.id,
-        quantity: 1,
-        unit_price: product.price,
-        unit_cost: product.cost,
-        subtotal: 0, // lo calcula el trigger
-        created_by: profile.id,
-      });
+  // Un solo viaje a la base: abrir la cuenta, traer el producto, buscar la
+  // línea existente e insertar o sumar, todo adentro del RPC. Antes eran 4
+  // llamadas en serie desde acá, cada una pagando la ida y vuelta completa.
+  const { error } = await supabase.rpc("add_product_to_table", {
+    p_table_id: tableId,
+    p_product_id: productId,
+  });
 
   if (error)
     return { error: "No se pudo cargar el producto: " + error.message };

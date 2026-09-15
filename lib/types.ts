@@ -126,6 +126,11 @@ export type BarTable = {
   is_system: boolean;
   /** id del perfil del mozo a cargo, o null si la mesa está libre. */
   assigned_waiter: string | null;
+  /**
+   * Fuera de operación: no aparece en el salón, la barra ni el QR, pero
+   * conserva su historia. Se da de baja en vez de borrarla cuando ya facturó.
+   */
+  active: boolean;
   /** Lugar en el plano del salón. */
   sector_id: string | null;
   pos_x: number;

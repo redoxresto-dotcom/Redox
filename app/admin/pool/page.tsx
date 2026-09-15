@@ -29,7 +29,12 @@ export default async function PoolPage() {
       .eq("is_pool_rate", true)
       .maybeSingle<{ id: string; name: string; price: number }>(),
     // Mesas del salón que todavía no son de pool: las candidatas a serlo.
-    supabase.from("tables").select("id, number, name").order("number"),
+    // Una dada de baja no es candidata: ya no está en operación.
+    supabase
+      .from("tables")
+      .select("id, number, name")
+      .eq("active", true)
+      .order("number"),
     supabase.rpc("pool_day_reservations"),
   ]);
 

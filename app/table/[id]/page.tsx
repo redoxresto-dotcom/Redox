@@ -30,7 +30,11 @@ export default async function TablePage({
   const supabase = await getSupabaseServerClient();
 
   const [tableRes, alertsRes, menuRes] = await Promise.all([
-    supabase.from("tables").select("id, number, name").eq("id", id).maybeSingle(),
+    supabase
+      .from("tables")
+      .select("id, number, name, active")
+      .eq("id", id)
+      .maybeSingle(),
     supabase
       .from("alerts")
       .select("type")
@@ -47,9 +51,11 @@ export default async function TablePage({
 
   const table = tableRes.data as Pick<
     BarTable,
-    "id" | "number" | "name"
+    "id" | "number" | "name" | "active"
   > | null;
-  if (!table) notFound();
+  // Una mesa dada de baja no tiene QR vigente: se trata igual que si no
+  // existiera, no como un error.
+  if (!table || !table.active) notFound();
 
   return (
     <TableClient

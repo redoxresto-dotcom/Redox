@@ -49,7 +49,7 @@ export async function loadSalon(): Promise<SalonData> {
     sectorsRes,
     poolRes,
   ] = await Promise.all([
-    supabase.from("tables").select("*").order("number"),
+    supabase.from("tables").select("*").eq("active", true).order("number"),
     supabase
       .from("orders")
       .select("*, order_items(*, product:products(id, name, category))")

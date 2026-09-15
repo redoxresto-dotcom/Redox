@@ -26,8 +26,11 @@ export default async function QrPage() {
 
   const supabase = await getSupabaseServerClient();
   const { data } = await supabase.from("tables").select("*").order("number");
-  // Las mesas internas (ventas sin conexión) no tienen QR físico.
-  const tables = ((data ?? []) as BarTable[]).filter((t) => !t.is_system);
+  // Las mesas internas (ventas sin conexión) no tienen QR físico, y una mesa
+  // dada de baja no tiene sentido imprimirla: ya no se puede escanear.
+  const tables = ((data ?? []) as BarTable[]).filter(
+    (t) => !t.is_system && t.active,
+  );
   const base = await siteUrl();
 
   const codes = await Promise.all(

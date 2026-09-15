@@ -16,8 +16,10 @@ import {
   createTable,
   deleteSector,
   deleteTable,
+  enableTable,
   renameSector,
   saveLayout,
+  type SalonResult,
   type LayoutInput,
 } from "./actions";
 import { CANVAS_H, CANVAS_W, GRID, clamp, fitScale, snap } from "@/lib/floor";
@@ -54,6 +56,7 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dirty, setDirty] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [nuevoSector, setNuevoSector] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -91,7 +94,8 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
     return () => window.removeEventListener("beforeunload", avisar);
   }, [dirty]);
 
-  const visibles = layout.filter((t) => t.sector_id === sectorId);
+  const visibles = layout.filter((t) => t.sector_id === sectorId && t.active);
+  const dadasDeBaja = layout.filter((t) => !t.active);
   const selected = layout.find((t) => t.id === selectedId) ?? null;
   const numeroRepetido =
     selected !== null &&
@@ -135,15 +139,16 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
     return () => window.removeEventListener("keydown", onKey);
   }, [selectedId, layout, patch]);
 
-  function run(
-    fn: () => Promise<{ error: string | null }>,
-    onDone?: () => void,
+  function run<T extends SalonResult>(
+    fn: () => Promise<T>,
+    onDone?: (result: T) => void,
   ) {
     setError(null);
+    setNotice(null);
     startTransition(async () => {
       const result = await fn();
       if (result.error) setError(result.error);
-      else onDone?.();
+      else onDone?.(result);
     });
   }
 
@@ -274,6 +279,12 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
           className="mb-4 rounded-lg bg-[var(--color-danger)]/15 px-3 py-2 text-sm text-[var(--color-danger)] backdrop-blur-md"
         >
           {error}
+        </p>
+      ) : null}
+
+      {notice ? (
+        <p className="mb-4 rounded-lg bg-[var(--color-free)]/15 px-3 py-2 text-sm text-[var(--color-free)] backdrop-blur-md">
+          {notice}
         </p>
       ) : null}
 
@@ -485,6 +496,43 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
                   </button>
                 </div>
               ) : null}
+
+              {dadasDeBaja.length > 0 ? (
+                <div className="border-t border-white/10 pt-3">
+                  <p className="mb-2 text-xs tracking-wide text-[var(--color-muted)] uppercase">
+                    Mesas dadas de baja
+                  </p>
+                  <ul className="grid gap-1.5">
+                    {dadasDeBaja.map((t) => (
+                      <li
+                        key={t.id}
+                        className="flex items-center justify-between gap-2 rounded-lg bg-white/5 px-3 py-2 text-sm backdrop-blur-md"
+                      >
+                        <span className="min-w-0 truncate text-[var(--color-muted)]">
+                          Mesa {t.number}
+                          {t.name ? ` · ${t.name}` : ""}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={isPending}
+                          onClick={() =>
+                            run(
+                              () => enableTable(t.id),
+                              () => {
+                                setNotice(`Mesa ${t.number} habilitada.`);
+                                router.refresh();
+                              },
+                            )
+                          }
+                          className="shrink-0 rounded-md bg-[var(--color-free)]/15 px-2 py-1 text-xs font-medium text-[var(--color-free)] backdrop-blur-md disabled:opacity-50"
+                        >
+                          Habilitar
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </div>
           ) : (
             <div className="grid gap-3">
@@ -687,15 +735,21 @@ export function FloorEditor({ sectors, tables, ocupadas }: Props) {
               <button
                 type="button"
                 disabled={isPending}
-                onClick={() =>
+                onClick={() => {
+                  const numero = selected.number;
                   run(
                     () => deleteTable(selected.id),
-                    () => {
+                    (result) => {
                       setSelectedId(null);
+                      setNotice(
+                        result.outcome === "baja"
+                          ? `Mesa ${numero} ya facturó alguna vez: se dio de baja en vez de borrarla. Podés habilitarla de nuevo cuando quieras.`
+                          : `Mesa ${numero} borrada.`,
+                      );
                       router.refresh();
                     },
-                  )
-                }
+                  );
+                }}
                 className="mt-1 rounded-lg bg-white/5 px-3 py-2 text-sm text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-[var(--color-danger)]/15 hover:text-[var(--color-danger)] disabled:opacity-50"
               >
                 Quitar mesa

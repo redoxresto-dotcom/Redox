@@ -24,6 +24,14 @@ import {
   type Station,
 } from "@/lib/types";
 import { ImportVentas, type VentaManual } from "./import-ventas";
+import {
+  Barra,
+  CancelledList,
+  CollapsibleCard,
+  HoursList,
+  Vacio,
+  WaiterSection,
+} from "./report-widgets";
 
 export const dynamic = "force-dynamic";
 
@@ -107,9 +115,7 @@ export default async function ReportesPage({
   const masVendidos = productos.slice(0, 10);
   const menosVendidos = [...productos].reverse().slice(0, 5);
 
-  const maxHora = Math.max(1, ...horas.map((h) => Number(h.total)));
   const maxDia = Math.max(1, ...dias.map((d) => Number(d.total)));
-  const maxMozo = Math.max(1, ...mozos.map((m) => Number(m.total)));
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-6">
@@ -171,7 +177,7 @@ export default async function ReportesPage({
       </section>
 
       <section className="mt-4 grid gap-4 lg:grid-cols-2">
-        <Card title="Por medio de pago">
+        <CollapsibleCard title="Por medio de pago">
           {medios.length === 0 ? (
             <Vacio />
           ) : (
@@ -196,9 +202,9 @@ export default async function ReportesPage({
               ))}
             </ul>
           )}
-        </Card>
+        </CollapsibleCard>
 
-        <Card title="Por día de la semana">
+        <CollapsibleCard title="Por día de la semana">
           {dias.length === 0 ? (
             <Vacio />
           ) : (
@@ -213,26 +219,13 @@ export default async function ReportesPage({
               ))}
             </ul>
           )}
-        </Card>
+        </CollapsibleCard>
 
-        <Card title="Por franja horaria" wide>
-          {horas.length === 0 ? (
-            <Vacio />
-          ) : (
-            <ul className="grid gap-1.5">
-              {horas.map((h) => (
-                <Barra
-                  key={h.hour}
-                  label={`${String(h.hour).padStart(2, "0")}:00`}
-                  value={Number(h.total)}
-                  max={maxHora}
-                />
-              ))}
-            </ul>
-          )}
-        </Card>
+        <CollapsibleCard title="Por franja horaria" wide>
+          <HoursList horas={horas} />
+        </CollapsibleCard>
 
-        <Card title="Demora en llegar a la mesa">
+        <CollapsibleCard title="Demora en llegar a la mesa">
           {entregas.length === 0 ? (
             <p className="py-6 text-center text-sm text-[var(--color-muted)]">
               Todavía no hay entregas registradas en el período.
@@ -276,9 +269,9 @@ export default async function ReportesPage({
               </p>
             </>
           )}
-        </Card>
+        </CollapsibleCard>
 
-        <Card title="Más vendidos">
+        <CollapsibleCard title="Más vendidos">
           {masVendidos.length === 0 ? (
             <Vacio />
           ) : (
@@ -304,9 +297,9 @@ export default async function ReportesPage({
               ))}
             </ol>
           )}
-        </Card>
+        </CollapsibleCard>
 
-        <Card title="Menos vendidos">
+        <CollapsibleCard title="Menos vendidos">
           {menosVendidos.length === 0 ? (
             <Vacio />
           ) : (
@@ -340,112 +333,19 @@ export default async function ReportesPage({
               ) : null}
             </>
           )}
-        </Card>
+        </CollapsibleCard>
       </section>
 
       <section className="mt-4">
-        <Card title="Ventas por mozo" wide>
-          {mozos.length === 0 ? (
-            <Vacio />
-          ) : (
-            <>
-              <ul className="grid gap-1.5">
-                {mozos.map((m) => (
-                  <Barra
-                    key={m.waiter_id ?? "sin-mozo"}
-                    label={m.waiter_name}
-                    value={Number(m.total)}
-                    max={maxMozo}
-                  />
-                ))}
-              </ul>
-
-              <div className="mt-4 overflow-x-auto border-t border-white/10 pt-3">
-                <table className="w-full min-w-[420px] text-sm">
-                  <thead>
-                    <tr className="text-left text-xs tracking-wide text-[var(--color-muted)] uppercase">
-                      <th className="pb-1.5 font-normal">Mozo</th>
-                      <th className="pb-1.5 text-right font-normal">
-                        Tickets
-                      </th>
-                      <th className="pb-1.5 text-right font-normal">
-                        Ticket promedio
-                      </th>
-                      <th className="pb-1.5 text-right font-normal">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {mozos.map((m) => (
-                      <tr
-                        key={m.waiter_id ?? "sin-mozo"}
-                        className="border-t border-white/10"
-                      >
-                        <td className="py-1.5">{m.waiter_name}</td>
-                        <td className="py-1.5 text-right tabular-nums">
-                          {m.tickets}
-                        </td>
-                        <td className="py-1.5 text-right tabular-nums">
-                          {formatMoney(Number(m.ticket_avg))}
-                        </td>
-                        <td className="py-1.5 text-right font-medium tabular-nums">
-                          {formatMoney(Number(m.total))}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <p className="mt-3 text-xs text-[var(--color-muted)]">
-                Se cuenta la venta de quien abrió la mesa, no de quien cobró:
-                es lo que refleja a quién atendió al cliente.
-              </p>
-            </>
-          )}
-        </Card>
+        <CollapsibleCard title="Ventas por mozo" wide>
+          <WaiterSection mozos={mozos} />
+        </CollapsibleCard>
       </section>
 
       <section className="mt-4">
-        <Card title="Pedidos cancelados" wide>
-          {cancelados.length === 0 ? (
-            <p className="py-6 text-center text-sm text-[var(--color-muted)]">
-              No hubo pedidos cancelados en el período.
-            </p>
-          ) : (
-            <ul className="grid gap-2">
-              {cancelados.map((c) => (
-                <li
-                  key={c.order_id}
-                  className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-white/10 pb-2 text-sm last:border-0 last:pb-0"
-                >
-                  <span className="min-w-0">
-                    <span className="font-medium">
-                      Mesa {c.table_number}
-                      {c.table_name ? ` · ${c.table_name}` : ""}
-                    </span>
-                    <span className="ml-2 text-xs text-[var(--color-muted)]">
-                      {new Date(c.cancelled_at).toLocaleString("es-UY", {
-                        day: "2-digit",
-                        month: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                      {c.cancelled_by ? ` · ${c.cancelled_by}` : ""}
-                    </span>
-                    {c.reason ? (
-                      <span className="block text-xs text-[var(--color-muted)]">
-                        {c.reason}
-                      </span>
-                    ) : null}
-                  </span>
-                  <span className="shrink-0 font-medium tabular-nums text-[var(--color-danger)]">
-                    {formatMoney(Number(c.total))}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
+        <CollapsibleCard title="Pedidos cancelados" wide>
+          <CancelledList cancelados={cancelados} />
+        </CollapsibleCard>
       </section>
 
       <section className="mt-6">
@@ -490,64 +390,6 @@ function Metric({ label, value }: { label: string; value: string }) {
       </p>
       <p className="mt-1 text-2xl font-semibold tabular-nums">{value}</p>
     </div>
-  );
-}
-
-function Card({
-  title,
-  wide,
-  children,
-}: {
-  title: string;
-  wide?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <section
-      className={`rounded-2xl bg-white/5 p-5 shadow-lg shadow-black/10 backdrop-blur-xl ${
-        wide ? "lg:col-span-2" : ""
-      }`}
-    >
-      <h2 className="mb-3 text-sm tracking-wide text-[var(--color-muted)] uppercase">
-        {title}
-      </h2>
-      {children}
-    </section>
-  );
-}
-
-function Barra({
-  label,
-  value,
-  max,
-}: {
-  label: string;
-  value: number;
-  max: number;
-}) {
-  return (
-    <li className="flex items-center gap-3 text-sm">
-      <span className="w-16 shrink-0 text-[var(--color-muted)] tabular-nums">
-        {label}
-      </span>
-      <span className="h-2.5 flex-1 overflow-hidden rounded-full bg-[var(--color-surface-2)]">
-        <span
-          className="block h-full rounded-full bg-[var(--color-accent)]"
-          style={{ width: `${Math.max(2, (value / max) * 100)}%` }}
-        />
-      </span>
-      <span className="w-24 shrink-0 text-right tabular-nums">
-        {formatMoney(value)}
-      </span>
-    </li>
-  );
-}
-
-function Vacio() {
-  return (
-    <p className="py-6 text-center text-sm text-[var(--color-muted)]">
-      No hubo ventas en el período.
-    </p>
   );
 }
 

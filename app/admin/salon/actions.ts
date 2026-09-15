@@ -6,6 +6,11 @@ import { requireAdmin } from "@/lib/auth";
 import type { TableShape } from "@/lib/types";
 
 export type SalonResult = { error: string | null };
+export type DeleteTableResult = {
+  error: string | null;
+  /** 'borrada' si no tenía historial, 'baja' si se desactivó para conservarlo. */
+  outcome: "borrada" | "baja" | null;
+};
 
 const OK: SalonResult = { error: null };
 
@@ -88,18 +93,40 @@ export async function createTable(
   return OK;
 }
 
-export async function deleteTable(id: string): Promise<SalonResult> {
+/**
+ * Quita una mesa. Si nunca facturó, se borra. Si ya tiene historial, se da de
+ * baja: sale de operación pero las ventas viejas conservan a qué mesa
+ * pertenecían.
+ */
+export async function deleteTable(id: string): Promise<DeleteTableResult> {
   await requireAdmin();
 
   const supabase = await getSupabaseServerClient();
-  const { error } = await supabase.rpc("delete_bar_table", { p_id: id });
+  const { data, error } = await supabase.rpc("delete_bar_table", {
+    p_id: id,
+  });
 
   if (error) {
     return {
-      error: error.message.includes("histórico")
-        ? "La mesa ya facturó alguna vez: borrarla se llevaría puesto el histórico de ventas."
-        : "No se pudo quitar la mesa: " + error.message,
+      error: "No se pudo quitar la mesa: " + error.message,
+      outcome: null,
     };
+  }
+
+  revalidatePath("/admin/salon");
+  revalidatePath("/admin");
+  return { error: null, outcome: data === "baja" ? "baja" : "borrada" };
+}
+
+/** Vuelve a poner en operación una mesa dada de baja. */
+export async function enableTable(id: string): Promise<SalonResult> {
+  await requireAdmin();
+
+  const supabase = await getSupabaseServerClient();
+  const { error } = await supabase.rpc("enable_bar_table", { p_id: id });
+
+  if (error) {
+    return { error: "No se pudo habilitar la mesa: " + error.message };
   }
 
   revalidatePath("/admin/salon");

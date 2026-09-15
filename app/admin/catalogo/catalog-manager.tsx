@@ -84,7 +84,22 @@ export function CatalogManager({
   }
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-6">
+    <main className="relative mx-auto max-w-5xl px-4 py-6">
+      {/*
+        Prueba de glassmorfismo: sin estas manchas de color detrás, los
+        paneles translúcidos + blur solo se ven como cajas grises apagadas.
+        Fixed y detrás de todo (-z-10): solo se nota este experimento
+        mientras se está viendo el Catálogo, no pisa el resto del admin.
+      */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 -z-10 overflow-hidden"
+      >
+        <div className="absolute -top-32 -left-32 size-[28rem] rounded-full bg-[var(--color-accent)]/20 blur-[110px]" />
+        <div className="absolute top-1/4 -right-40 size-[26rem] rounded-full bg-[var(--color-brand)]/25 blur-[110px]" />
+        <div className="absolute bottom-0 left-1/3 size-[24rem] rounded-full bg-[var(--color-free)]/10 blur-[110px]" />
+      </div>
+
       <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-3xl font-black tracking-tight uppercase">
@@ -101,7 +116,7 @@ export function CatalogManager({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar…"
-            className="w-36 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+            className="w-36 rounded-lg bg-white/5 px-3 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none placeholder:text-[var(--color-muted)] focus:bg-white/10"
           />
           <button
             type="button"
@@ -111,7 +126,7 @@ export function CatalogManager({
               setEditingId(null);
               setError(null);
             }}
-            className="rounded-lg border border-[var(--color-border)] px-4 py-2 text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-ink)]"
+            className="rounded-lg bg-white/5 px-4 py-2 text-sm text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-white/10 hover:text-[var(--color-ink)]"
           >
             {importing ? "Cerrar" : "Importar CSV"}
           </button>
@@ -123,7 +138,7 @@ export function CatalogManager({
               setEditingId(null);
               setError(null);
             }}
-            className="rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-[#04121c]"
+            className="rounded-lg bg-[var(--color-accent)]/90 px-4 py-2 text-sm font-semibold text-[#04121c] shadow-lg shadow-[var(--color-accent)]/20 backdrop-blur-md transition-colors hover:bg-[var(--color-accent)]"
           >
             {creating ? "Cancelar" : "+ Producto"}
           </button>
@@ -142,7 +157,7 @@ export function CatalogManager({
       ) : null}
 
       {creating ? (
-        <div className="mb-4 rounded-xl border border-[var(--color-accent)]/40 bg-[var(--color-surface)] p-4">
+        <div className="mb-4 rounded-xl border border-white/10 bg-[var(--color-surface)]/40 p-4 shadow-xl shadow-black/30 backdrop-blur-xl">
           <ProductForm
             products={products}
             disabled={isPending}
@@ -158,7 +173,7 @@ export function CatalogManager({
       {editingProduct ? (
         <div
           ref={editPanelRef}
-          className="mb-4 rounded-xl border border-[var(--color-accent)]/40 bg-[var(--color-surface)] p-4"
+          className="mb-4 rounded-xl border border-white/10 bg-[var(--color-surface)]/40 p-4 shadow-xl shadow-black/30 backdrop-blur-xl"
         >
           <p className="mb-3 text-xs font-semibold tracking-wide text-[var(--color-muted)] uppercase">
             Editando «{editingProduct.name}»
@@ -188,9 +203,9 @@ export function CatalogManager({
         Acá el contenido angosto (precios, badges) se corta con truncate en
         vez de estirar la tabla.
       */}
-      <div className="overflow-x-auto rounded-xl border border-[var(--color-border)]">
+      <div className="overflow-x-auto rounded-xl border border-white/10 bg-[var(--color-surface)]/30 shadow-xl shadow-black/20 backdrop-blur-xl">
         <table className="w-full table-fixed text-sm">
-          <thead className="bg-[var(--color-surface)] text-left text-xs tracking-wide text-[var(--color-muted)] uppercase">
+          <thead className="bg-white/5 text-left text-xs tracking-wide text-[var(--color-muted)] uppercase backdrop-blur-md">
             <tr>
               <th className="w-[21%] truncate px-3 py-2.5 font-medium">Producto</th>
               <th className="w-[9%] truncate px-3 py-2.5 font-medium">Categoría</th>
@@ -220,7 +235,7 @@ export function CatalogManager({
                 return (
                   <tr
                     key={product.id}
-                    className={`border-t border-[var(--color-border)] ${
+                    className={`border-t border-white/5 ${
                       isEditing
                         ? "bg-[var(--color-accent)]/5"
                         : product.active
@@ -480,10 +495,10 @@ function ProductForm({
           <img
             src={imagePreview}
             alt=""
-            className="size-16 shrink-0 rounded-xl border border-[var(--color-border)] object-cover"
+            className="size-16 shrink-0 rounded-xl border border-white/10 object-cover"
           />
         ) : (
-          <div className="flex size-16 shrink-0 items-center justify-center rounded-xl border border-dashed border-[var(--color-border)] text-[10px] text-[var(--color-muted)]">
+          <div className="flex size-16 shrink-0 items-center justify-center rounded-xl border border-dashed border-white/15 text-[10px] text-[var(--color-muted)]">
             Sin foto
           </div>
         )}
@@ -530,7 +545,7 @@ function ProductForm({
             defaultValue={product?.name}
             required
             autoFocus
-            className="w-full min-w-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+            className="w-full min-w-0 rounded-lg bg-white/5 px-3 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
           />
         </label>
 
@@ -539,7 +554,7 @@ function ProductForm({
           <select
             name="category"
             defaultValue={product?.category ?? "bebida"}
-            className="w-full min-w-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+            className="w-full min-w-0 rounded-lg bg-white/5 px-3 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
           >
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>
@@ -554,7 +569,7 @@ function ProductForm({
           <select
             name="station"
             defaultValue={product?.station ?? "barra"}
-            className="w-full min-w-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+            className="w-full min-w-0 rounded-lg bg-white/5 px-3 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
           >
             {STATIONS.map((st) => (
               <option key={st} value={st}>
@@ -577,7 +592,7 @@ function ProductForm({
             step="0.01"
             defaultValue={product?.price ?? ""}
             required
-            className="w-full min-w-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm tabular-nums outline-none focus:border-[var(--color-accent)]"
+            className="w-full min-w-0 rounded-lg bg-white/5 px-3 py-2 text-sm tabular-nums shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
           />
         </label>
 
@@ -589,7 +604,7 @@ function ProductForm({
             min="0"
             step="0.01"
             defaultValue={product?.cost ?? 0}
-            className="w-full min-w-0 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm tabular-nums outline-none focus:border-[var(--color-accent)]"
+            className="w-full min-w-0 rounded-lg bg-white/5 px-3 py-2 text-sm tabular-nums shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
           />
         </label>
       </div>
@@ -602,7 +617,7 @@ function ProductForm({
           name="description"
           defaultValue={product?.description ?? ""}
           placeholder="Gin, campari, vermouth rosso"
-          className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+          className="rounded-lg bg-white/5 px-3 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
         />
       </label>
 
@@ -630,7 +645,7 @@ function ProductForm({
       </div>
 
       {isCombo ? (
-        <div className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3">
+        <div className="w-full rounded-lg border border-white/10 bg-white/5 p-3 backdrop-blur-md">
           <input type="hidden" name="combo_items" value={JSON.stringify(items)} />
 
           <div className="mb-3 grid gap-2 sm:grid-cols-2">
@@ -642,7 +657,7 @@ function ProductForm({
                 type="date"
                 name="combo_valid_from"
                 defaultValue={product?.combo_valid_from ?? ""}
-                className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+                className="rounded-lg bg-white/5 px-3 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
               />
             </label>
             <label className="grid gap-1">
@@ -653,7 +668,7 @@ function ProductForm({
                 type="date"
                 name="combo_valid_until"
                 defaultValue={product?.combo_valid_until ?? ""}
-                className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+                className="rounded-lg bg-white/5 px-3 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
               />
             </label>
             <p className="text-xs text-[var(--color-muted)] sm:col-span-2">
@@ -676,7 +691,7 @@ function ProductForm({
                 return (
                   <li
                     key={item.product_id}
-                    className="flex items-center gap-2 rounded-lg bg-[var(--color-surface)] px-2 py-1.5"
+                    className="flex items-center gap-2 rounded-lg bg-white/5 px-2 py-1.5 backdrop-blur-md"
                   >
                     <span className="flex-1 truncate text-sm">
                       {producto?.name ?? "Producto"}
@@ -688,7 +703,7 @@ function ProductForm({
                       onChange={(e) =>
                         cambiarCantidad(item.product_id, Number(e.target.value))
                       }
-                      className="w-14 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2 py-1 text-sm tabular-nums outline-none focus:border-[var(--color-accent)]"
+                      className="w-14 rounded-lg bg-white/10 px-2 py-1 text-sm tabular-nums shadow-inner shadow-black/20 outline-none focus:bg-white/15"
                     />
                     <button
                       type="button"
@@ -708,7 +723,7 @@ function ProductForm({
             <select
               value={pickerId}
               onChange={(e) => setPickerId(e.target.value)}
-              className="flex-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm outline-none focus:border-[var(--color-accent)]"
+              className="flex-1 rounded-lg bg-white/5 px-3 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
             >
               <option value="">Elegí un producto…</option>
               {disponibles.map((p) => (
@@ -721,7 +736,7 @@ function ProductForm({
               type="button"
               onClick={agregarComponente}
               disabled={!pickerId}
-              className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted)] transition-colors hover:border-[var(--color-accent)] hover:text-[var(--color-accent)] disabled:opacity-50"
+              className="rounded-lg bg-white/5 px-3 py-2 text-sm text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-white/10 hover:text-[var(--color-accent)] disabled:opacity-50"
             >
               + Agregar
             </button>
@@ -739,14 +754,14 @@ function ProductForm({
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm text-[var(--color-muted)]"
+          className="rounded-lg bg-white/5 px-3 py-2 text-sm text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-white/10 hover:text-[var(--color-ink)]"
         >
           Cancelar
         </button>
         <button
           type="submit"
           disabled={disabled}
-          className="rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-[#04121c] disabled:opacity-50"
+          className="rounded-lg bg-[var(--color-accent)]/90 px-4 py-2 text-sm font-semibold text-[#04121c] shadow-lg shadow-[var(--color-accent)]/20 backdrop-blur-md transition-colors hover:bg-[var(--color-accent)] disabled:opacity-50"
         >
           {submitLabel}
         </button>

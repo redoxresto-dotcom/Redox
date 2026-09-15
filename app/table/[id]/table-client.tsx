@@ -158,7 +158,7 @@ export function TableClient({
             <button
               type="button"
               onClick={() => setVerCarta(true)}
-              className="flex min-h-36 w-full flex-col items-center justify-center gap-2 rounded-3xl border-2 border-[var(--color-border)] bg-[var(--color-surface)] px-6 py-8 transition-colors active:bg-[var(--color-surface-2)]"
+              className="flex min-h-36 w-full flex-col items-center justify-center gap-2 rounded-3xl bg-white/5 px-6 py-8 shadow-lg shadow-black/20 backdrop-blur-xl transition-colors active:bg-white/10"
             >
               <span aria-hidden className="text-4xl">
                 📖
@@ -181,10 +181,10 @@ export function TableClient({
                 onClick={() => send(button.type)}
                 disabled={active || isSending}
                 aria-live="polite"
-                className={`flex min-h-36 w-full flex-col items-center justify-center gap-2 rounded-3xl border-2 px-6 py-8 transition-colors ${
+                className={`flex min-h-36 w-full flex-col items-center justify-center gap-2 rounded-3xl px-6 py-8 shadow-lg shadow-black/20 backdrop-blur-xl transition-colors ${
                   active
-                    ? "border-[var(--color-free)] bg-[var(--color-free)]/15"
-                    : "border-[var(--color-border)] bg-[var(--color-surface)] active:bg-[var(--color-surface-2)]"
+                    ? "bg-[var(--color-free)]/15"
+                    : "bg-white/5 active:bg-white/10"
                 } disabled:cursor-default`}
               >
                 <span aria-hidden className="text-4xl">
@@ -352,20 +352,28 @@ function Carta({ menu, onClose }: { menu: MenuItem[]; onClose: () => void }) {
       aria-label="Carta"
       className="fixed inset-0 z-50 flex flex-col bg-[var(--color-bg)]"
     >
-      {/* La mascota, muy tenue, detrás de todo el menú. */}
+      {/*
+        Manchas de color detrás de todo, para que los paneles translúcidos +
+        blur tengan algo de fondo que revelar — si no, "glass" sobre un fondo
+        plano solo se ve como una caja gris apagada.
+      */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 z-0 flex items-start justify-center overflow-hidden select-none"
+        className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
       >
+        <div className="absolute -top-24 -left-24 size-96 rounded-full bg-[var(--color-brand)]/25 blur-[100px]" />
+        <div className="absolute top-1/2 -right-32 size-96 rounded-full bg-[var(--color-accent)]/15 blur-[100px]" />
+        <div className="absolute bottom-0 left-1/4 size-80 rounded-full bg-[var(--color-free)]/10 blur-[100px]" />
+        {/* La mascota, muy tenue, por encima de las manchas. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/redox-mascota.png"
           alt=""
-          className="mt-12 h-[72vh] w-auto opacity-[0.06]"
+          className="absolute top-12 left-1/2 h-[72vh] w-auto -translate-x-1/2 opacity-[0.06] select-none"
         />
       </div>
 
-      <header className="relative z-10 flex items-center gap-3 border-b border-[var(--color-border)] px-5 py-4">
+      <header className="relative z-10 flex items-center gap-3 bg-white/5 px-5 py-4 backdrop-blur-xl">
         <RedoxFlask size={24} />
         {vista && !buscando ? (
           <button
@@ -382,13 +390,13 @@ function Carta({ menu, onClose }: { menu: MenuItem[]; onClose: () => void }) {
           type="button"
           onClick={onClose}
           aria-label="Cerrar la carta"
-          className="ml-auto grid size-9 place-items-center rounded-full border border-[var(--color-border)] text-sm text-[var(--color-muted)] active:bg-[var(--color-surface)]"
+          className="ml-auto grid size-9 place-items-center rounded-full bg-white/10 text-sm text-[var(--color-muted)] backdrop-blur-md active:bg-white/20"
         >
           ✕
         </button>
       </header>
 
-      <div className="relative z-10 border-b border-[var(--color-border)] bg-[var(--color-bg)] px-5 py-3">
+      <div className="relative z-10 bg-white/5 px-5 py-3 backdrop-blur-xl">
         <div className="relative mx-auto w-full max-w-md">
           <span
             aria-hidden
@@ -403,7 +411,7 @@ function Carta({ menu, onClose }: { menu: MenuItem[]; onClose: () => void }) {
             onChange={(e) => setBusqueda(e.target.value)}
             placeholder="Buscar en la carta…"
             aria-label="Buscar en la carta"
-            className="w-full rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] py-2.5 pr-4 pl-10 text-sm outline-none focus:border-[var(--color-brand)]"
+            className="w-full rounded-full bg-white/10 py-2.5 pr-4 pl-10 text-sm shadow-inner shadow-black/10 backdrop-blur-md outline-none focus:bg-white/15"
           />
         </div>
       </div>
@@ -422,7 +430,7 @@ function Carta({ menu, onClose }: { menu: MenuItem[]; onClose: () => void }) {
               </h3>
 
               {resultados.length === 0 ? (
-                <p className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/80 px-4 py-10 text-center text-sm text-[var(--color-muted)]">
+                <p className="rounded-2xl bg-white/5 px-4 py-10 text-center text-sm text-[var(--color-muted)] backdrop-blur-xl">
                   No encontramos nada con "{busqueda.trim()}".
                 </p>
               ) : (
@@ -450,7 +458,7 @@ function Carta({ menu, onClose }: { menu: MenuItem[]; onClose: () => void }) {
               <PromosCarousel promos={promos} onAbrir={setDetalle} />
 
               {categorias.length === 0 ? (
-                <p className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)]/80 px-4 py-10 text-center text-sm text-[var(--color-muted)]">
+                <p className="rounded-2xl bg-white/5 px-4 py-10 text-center text-sm text-[var(--color-muted)] backdrop-blur-xl">
                   La carta todavía no tiene productos cargados.
                 </p>
               ) : (
@@ -460,7 +468,7 @@ function Carta({ menu, onClose }: { menu: MenuItem[]; onClose: () => void }) {
                       key={c.id}
                       type="button"
                       onClick={() => setVista(c.id)}
-                      className="flex items-center gap-4 rounded-2xl border border-[var(--color-brand)]/45 bg-[var(--color-surface)]/80 p-4 text-left backdrop-blur transition-colors active:bg-[var(--color-surface-2)]/80"
+                      className="flex items-center gap-4 rounded-2xl bg-white/5 p-4 text-left shadow-lg shadow-black/10 backdrop-blur-xl transition-colors active:bg-white/10"
                     >
                       <span className="grid size-14 shrink-0 place-items-center rounded-full bg-[var(--color-free)] text-2xl">
                         {c.emoji}
@@ -504,7 +512,7 @@ function Carta({ menu, onClose }: { menu: MenuItem[]; onClose: () => void }) {
             </>
           )}
 
-          <div className="mt-8 rounded-2xl border border-[var(--color-brand)]/40 px-5 py-4 text-center">
+          <div className="mt-8 rounded-2xl bg-white/5 px-5 py-4 text-center backdrop-blur-xl">
             <p className="text-sm font-bold tracking-wide">
               REDOX · SABOR CON ACTITUD
             </p>
@@ -548,7 +556,7 @@ function PromosCarousel({
             key={item.id}
             type="button"
             onClick={() => onAbrir(item)}
-            className="flex w-40 shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-[var(--color-brand)]/45 bg-[var(--color-surface)]/80 text-left backdrop-blur transition-transform active:scale-[0.97]"
+            className="flex w-40 shrink-0 snap-start flex-col overflow-hidden rounded-2xl bg-white/5 text-left shadow-lg shadow-black/10 backdrop-blur-xl transition-transform active:scale-[0.97]"
           >
             {item.image_url ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -619,7 +627,7 @@ function DetalleProducto({
             type="button"
             onClick={onClose}
             aria-label="Cerrar detalle"
-            className="absolute top-4 right-4 grid size-10 place-items-center rounded-full bg-[var(--color-bg)]/70 text-lg text-[var(--color-ink)] backdrop-blur active:bg-[var(--color-bg)]"
+            className="absolute top-4 right-4 grid size-10 place-items-center rounded-full bg-white/10 text-lg text-[var(--color-ink)] backdrop-blur-xl active:bg-white/20"
           >
             ✕
           </button>
@@ -642,7 +650,7 @@ function DetalleProducto({
             {formatMoney(item.price)}
           </span>
 
-          <div className="mt-6 border-t border-[var(--color-border)] pt-5">
+          <div className="mt-6 border-t border-white/10 pt-5">
             <p className="text-xs font-semibold tracking-[0.22em] text-[var(--color-brand-soft)] uppercase">
               Ingredientes y preparación
             </p>
@@ -678,7 +686,7 @@ function ProductoCard({
     <button
       type="button"
       onClick={() => onAbrir(item)}
-      className="flex gap-3 rounded-2xl border border-[var(--color-brand)]/40 bg-[var(--color-surface)]/80 p-3 text-left backdrop-blur transition-transform active:scale-[0.98]"
+      className="flex gap-3 rounded-2xl bg-white/5 p-3 text-left shadow-lg shadow-black/10 backdrop-blur-xl transition-transform active:scale-[0.98]"
     >
       {item.image_url ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -686,12 +694,12 @@ function ProductoCard({
           src={item.image_url}
           alt=""
           loading="lazy"
-          className="size-24 shrink-0 rounded-xl border border-[var(--color-border)] object-cover"
+          className="size-24 shrink-0 rounded-xl object-cover"
         />
       ) : (
         <span
           aria-hidden
-          className="grid size-24 shrink-0 place-items-center rounded-xl border border-dashed border-[var(--color-brand)]/40 text-2xl"
+          className="grid size-24 shrink-0 place-items-center rounded-xl border border-dashed border-white/20 text-2xl"
         >
           🧪
         </span>

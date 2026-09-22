@@ -28,6 +28,7 @@ function parseForm(formData: FormData):
         description: string | null;
         in_menu: boolean;
         is_combo: boolean;
+        contains_alcohol: boolean;
         combo_valid_from: string | null;
         combo_valid_until: string | null;
       };
@@ -43,6 +44,10 @@ function parseForm(formData: FormData):
   // Checkbox sin marcar no viaja en el formulario.
   const in_menu = formData.get("in_menu") !== null;
   const is_combo = formData.get("is_combo") !== null;
+  // Solo tiene sentido en bebidas: si mandan el checkbox marcado para otra
+  // categoría (formulario manipulado, no por la UI normal), no se guarda.
+  const contains_alcohol =
+    category === "bebida" && formData.get("contains_alcohol") !== null;
 
   // Vigencia: solo tiene sentido en combos. Fuera de un combo se guarda null
   // para no arrastrar fechas de cuando el producto sí lo era.
@@ -115,6 +120,7 @@ function parseForm(formData: FormData):
       description: description || null,
       in_menu,
       is_combo,
+      contains_alcohol,
       combo_valid_from,
       combo_valid_until,
     },

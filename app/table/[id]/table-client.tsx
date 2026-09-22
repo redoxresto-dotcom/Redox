@@ -241,6 +241,15 @@ const EMOJI_CATEGORIA: Record<ProductCategory, string> = {
 
 type Vista = ProductCategory | "promos";
 
+/** Sub-filtro que solo tiene sentido dentro de la categoría "bebida". */
+type FiltroAlcohol = "todos" | "sin_alcohol" | "con_alcohol";
+
+const FILTROS_ALCOHOL: { id: FiltroAlcohol; label: string }[] = [
+  { id: "todos", label: "Ver todos" },
+  { id: "sin_alcohol", label: "Sin alcohol" },
+  { id: "con_alcohol", label: "Con alcohol" },
+];
+
 /** Sin tildes ni mayúsculas, para que "maracuya" encuentre "maracuyá". */
 function normalizar(s: string): string {
   return s
@@ -264,7 +273,14 @@ function Carta({ menu, onClose }: { menu: MenuItem[]; onClose: () => void }) {
   const [vista, setVista] = useState<Vista | null>(null);
   const [busqueda, setBusqueda] = useState("");
   const [detalle, setDetalle] = useState<MenuItem | null>(null);
+  const [filtroAlcohol, setFiltroAlcohol] = useState<FiltroAlcohol>("todos");
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Arranca siempre en "Ver todos": ni bien se cambia de categoría (o se
+  // vuelve a entrar a Bebidas), no tiene sentido arrastrar el filtro anterior.
+  useEffect(() => {
+    setFiltroAlcohol("todos");
+  }, [vista]);
 
   const promos = menu.filter((i) => i.is_combo);
   const grupos = ORDEN_CATEGORIAS.map((categoria) => ({
@@ -309,12 +325,22 @@ function Carta({ menu, onClose }: { menu: MenuItem[]; onClose: () => void }) {
     })),
   ];
 
-  const items =
+  const itemsDeVista =
     vista === "promos"
       ? promos
       : vista
         ? (grupos.find((g) => g.categoria === vista)?.items ?? [])
         : [];
+
+  // El sub-filtro con/sin alcohol solo existe dentro de Bebidas.
+  const items =
+    vista === "bebida" && filtroAlcohol !== "todos"
+      ? itemsDeVista.filter((i) =>
+          filtroAlcohol === "con_alcohol"
+            ? i.contains_alcohol
+            : !i.contains_alcohol,
+        )
+      : itemsDeVista;
   const tituloVista = categorias.find((c) => c.id === vista)?.titulo ?? "";
 
   // Referencias con el valor más reciente: el listener de popstate se
@@ -557,11 +583,36 @@ function Carta({ menu, onClose }: { menu: MenuItem[]; onClose: () => void }) {
                 {tituloVista}
               </h3>
 
-              <div className="grid gap-3">
-                {items.map((item) => (
-                  <ProductoCard key={item.id} item={item} onAbrir={setDetalle} />
-                ))}
-              </div>
+              {vista === "bebida" ? (
+                <div className="mb-4 flex flex-wrap gap-2">
+                  {FILTROS_ALCOHOL.map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setFiltroAlcohol(f.id)}
+                      className={`rounded-full px-3.5 py-1.5 text-xs font-semibold tracking-wide uppercase transition-colors ${
+                        filtroAlcohol === f.id
+                          ? "bg-[var(--color-brand)] text-[var(--color-bg)]"
+                          : "bg-white/5 text-[var(--color-muted)] backdrop-blur-md"
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+
+              {items.length === 0 ? (
+                <p className="rounded-2xl bg-white/5 px-4 py-10 text-center text-sm text-[var(--color-muted)] backdrop-blur-xl">
+                  No hay productos en este filtro.
+                </p>
+              ) : (
+                <div className="grid gap-3">
+                  {items.map((item) => (
+                    <ProductoCard key={item.id} item={item} onAbrir={setDetalle} />
+                  ))}
+                </div>
+              )}
             </>
           )}
 

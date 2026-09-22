@@ -434,6 +434,12 @@ function ProductForm({
   submitLabel: string;
 }) {
   const [isCombo, setIsCombo] = useState(product?.is_combo ?? false);
+  const [category, setCategory] = useState<ProductCategory>(
+    product?.category ?? "bebida",
+  );
+  const [containsAlcohol, setContainsAlcohol] = useState(
+    product?.contains_alcohol ?? false,
+  );
   const [items, setItems] = useState<ComboComponent[]>(comboItems ?? []);
   const [pickerId, setPickerId] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(
@@ -553,7 +559,8 @@ function ProductForm({
           <span className="text-xs text-[var(--color-muted)]">Categoría</span>
           <select
             name="category"
-            defaultValue={product?.category ?? "bebida"}
+            value={category}
+            onChange={(e) => setCategory(e.target.value as ProductCategory)}
             className="w-full min-w-0 rounded-lg bg-white/5 px-3 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
           >
             {CATEGORIES.map((c) => (
@@ -642,6 +649,19 @@ function ProductForm({
           />
           <span className="text-sm">Es un combo o promoción</span>
         </label>
+
+        {category === "bebida" ? (
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              name="contains_alcohol"
+              checked={containsAlcohol}
+              onChange={(e) => setContainsAlcohol(e.target.checked)}
+              className="size-4 accent-[var(--color-accent)]"
+            />
+            <span className="text-sm">Contiene alcohol</span>
+          </label>
+        ) : null}
       </div>
 
       {isCombo ? (

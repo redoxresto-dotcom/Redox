@@ -44,6 +44,8 @@ export type Product = {
   is_combo: boolean;
   /** La tarifa vigente de pool: de acá sale el precio de `pool_sell_time`. */
   is_pool_rate: boolean;
+  /** Solo tiene sentido en bebidas: separa la carta en con/sin alcohol. */
+  contains_alcohol: boolean;
   /**
    * Vigencia de la promoción (solo tiene sentido en combos). Fechas `YYYY-MM-DD`
    * en hora de Montevideo. `null` = sin límite por ese lado. Fuera de la
@@ -101,6 +103,8 @@ export type MenuItem = {
   category: ProductCategory;
   image_url: string | null;
   is_combo: boolean;
+  /** Solo tiene sentido en bebidas: separa la carta en con/sin alcohol. */
+  contains_alcohol: boolean;
 };
 
 export type Sector = {

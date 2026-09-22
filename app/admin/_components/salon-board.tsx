@@ -1,6 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import {
+  useEffect,
+  useMemo,
+  useOptimistic,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -667,6 +674,107 @@ function FloorTableCard({
 
 // ---------------------------------------------------------------------------
 
+type ItemAction =
+  | { type: "add"; product: Product }
+  | { type: "quantity"; itemId: string; delta: number }
+  | { type: "remove"; itemId: string };
+
+/**
+ * Adelanta en la pantalla lo que el RPC va a terminar dejando en la base, para
+ * que tocar un producto (o el +/-, o la ✕) se sienta instantáneo en vez de
+ * esperar la ida y vuelta a Supabase. Espeja a propósito las mismas reglas de
+ * add_product_to_table / change_order_item_quantity (migraciones 032 y 033):
+ * sumar sobre una línea ya en camino a la estación la haría invisible para
+ * ella, así que esa unidad nueva abre su propia línea en vez de sumarse.
+ *
+ * Las líneas que crea acá son temporales (id "optimista-…") y se descartan
+ * solas apenas la pantalla recibe la respuesta real del servidor.
+ */
+function itemsOptimistas(
+  state: OrderItemWithProduct[],
+  action: ItemAction,
+): OrderItemWithProduct[] {
+  switch (action.type) {
+    case "add": {
+      const { product } = action;
+      const idx = state.findIndex(
+        (i) => i.product_id === product.id && i.status === "pedido",
+      );
+      if (idx !== -1) {
+        const item = state[idx];
+        const quantity = item.quantity + 1;
+        const actualizado = {
+          ...item,
+          quantity,
+          subtotal: quantity * item.unit_price,
+        };
+        return state.map((i, n) => (n === idx ? actualizado : i));
+      }
+
+      const nuevo: OrderItemWithProduct = {
+        id: `optimista-${product.id}-${Date.now()}`,
+        order_id: "",
+        product_id: product.id,
+        quantity: 1,
+        unit_price: product.price,
+        unit_cost: product.cost,
+        subtotal: product.price,
+        station: product.station,
+        status: "pedido",
+        started_at: null,
+        ready_at: null,
+        delivered_at: null,
+        started_by: null,
+        ready_by: null,
+        delivered_by: null,
+        created_by: null,
+        created_at: new Date().toISOString(),
+        product: {
+          id: product.id,
+          name: product.name,
+          category: product.category,
+        },
+      };
+      return [...state, nuevo];
+    }
+
+    case "quantity": {
+      const idx = state.findIndex((i) => i.id === action.itemId);
+      if (idx === -1) return state;
+      const item = state[idx];
+
+      if (action.delta > 0 && item.status !== "pedido") {
+        const nuevo: OrderItemWithProduct = {
+          ...item,
+          id: `optimista-${item.product_id}-${Date.now()}`,
+          quantity: action.delta,
+          subtotal: action.delta * item.unit_price,
+          status: "pedido",
+          started_at: null,
+          ready_at: null,
+          delivered_at: null,
+        };
+        return [...state, nuevo];
+      }
+
+      const next = item.quantity + action.delta;
+      if (next <= 0) return state.filter((_, n) => n !== idx);
+      const actualizado = {
+        ...item,
+        quantity: next,
+        subtotal: next * item.unit_price,
+      };
+      return state.map((i, n) => (n === idx ? actualizado : i));
+    }
+
+    case "remove":
+      return state.filter((i) => i.id !== action.itemId);
+
+    default:
+      return state;
+  }
+}
+
 function TablePanel({
   detail,
   products,
@@ -692,6 +800,10 @@ function TablePanel({
 }) {
   const { table, order, items } = detail;
   const [isPending, startTransition] = useTransition();
+  const [optimisticItems, applyOptimistic] = useOptimistic(
+    items,
+    itemsOptimistas,
+  );
   const [category, setCategory] = useState<ProductCategory | "todos">("todos");
   const [search, setSearch] = useState("");
   const [confirmingClose, setConfirmingClose] = useState(false);
@@ -708,11 +820,23 @@ function TablePanel({
     return () => window.removeEventListener("keydown", onEsc);
   }, [onClose]);
 
-  function run(fn: () => Promise<{ error: string | null }>) {
+  /**
+   * `optimistic`, si se pasa, corre antes de mandar la acción al servidor:
+   * es lo que hace sentir instantáneo el toque. El `router.refresh()` de acá
+   * no espera al aviso en tiempo real (que puede tardar) para que quien tocó
+   * el botón vea su propio cambio confirmado; las demás pantallas conectadas
+   * lo siguen recibiendo por la suscripción de siempre.
+   */
+  function run(
+    fn: () => Promise<{ error: string | null }>,
+    optimistic?: () => void,
+  ) {
     onError(null);
     startTransition(async () => {
+      optimistic?.();
       const result = await fn();
       if (result.error) onError(result.error);
+      router.refresh();
     });
   }
 
@@ -725,9 +849,12 @@ function TablePanel({
     );
   }, [products, category, search]);
 
-  const total = order?.total ?? 0;
-  const unidades = items.reduce((n, i) => n + i.quantity, 0);
-  const comanda = comandaDe(items);
+  // Se suma desde los ítems (optimistas incluidos) en vez de leer order.total:
+  // así el total refleja el toque al instante, sin esperar a que el trigger
+  // de la base lo recalcule y la pantalla se entere por la vuelta del server.
+  const total = optimisticItems.reduce((sum, i) => sum + i.subtotal, 0);
+  const unidades = optimisticItems.reduce((n, i) => n + i.quantity, 0);
+  const comanda = comandaDe(optimisticItems);
 
   function cobrar(method: PaymentMethod) {
     if (!order) return;
@@ -902,13 +1029,13 @@ function TablePanel({
 
         {/* Cuenta */}
         <div className="max-h-[38%] overflow-y-auto border-b border-white/10 px-5 py-3">
-          {items.length === 0 ? (
+          {optimisticItems.length === 0 ? (
             <p className="py-6 text-center text-sm text-[var(--color-muted)]">
               La mesa todavía no tiene consumos.
             </p>
           ) : (
             <ul className="grid gap-1.5">
-              {items.map((item) => (
+              {optimisticItems.map((item) => (
                 <li
                   key={item.id}
                   className="flex items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-[var(--color-surface)]"
@@ -951,7 +1078,17 @@ function TablePanel({
                       type="button"
                       aria-label="Restar una unidad"
                       disabled={isPending}
-                      onClick={() => run(() => changeItemQuantity(item.id, -1))}
+                      onClick={() =>
+                        run(
+                          () => changeItemQuantity(item.id, -1),
+                          () =>
+                            applyOptimistic({
+                              type: "quantity",
+                              itemId: item.id,
+                              delta: -1,
+                            }),
+                        )
+                      }
                       className="size-8 rounded-lg bg-white/5 text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-white/10 hover:text-[var(--color-ink)] disabled:opacity-50"
                     >
                       −
@@ -963,7 +1100,17 @@ function TablePanel({
                       type="button"
                       aria-label="Sumar una unidad"
                       disabled={isPending}
-                      onClick={() => run(() => changeItemQuantity(item.id, 1))}
+                      onClick={() =>
+                        run(
+                          () => changeItemQuantity(item.id, 1),
+                          () =>
+                            applyOptimistic({
+                              type: "quantity",
+                              itemId: item.id,
+                              delta: 1,
+                            }),
+                        )
+                      }
                       className="size-8 rounded-lg bg-white/5 text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-white/10 hover:text-[var(--color-ink)] disabled:opacity-50"
                     >
                       +
@@ -978,7 +1125,12 @@ function TablePanel({
                     type="button"
                     aria-label="Quitar de la cuenta"
                     disabled={isPending}
-                    onClick={() => run(() => removeItem(item.id))}
+                    onClick={() =>
+                      run(
+                        () => removeItem(item.id),
+                        () => applyOptimistic({ type: "remove", itemId: item.id }),
+                      )
+                    }
                     className="rounded-lg px-1.5 py-1 text-sm text-[var(--color-muted)] transition-colors hover:text-[var(--color-danger)] disabled:opacity-50"
                   >
                     ✕
@@ -1030,7 +1182,10 @@ function TablePanel({
                       type="button"
                       disabled={isPending}
                       onClick={() =>
-                        run(() => addProductToTable(table.id, product.id))
+                        run(
+                          () => addProductToTable(table.id, product.id),
+                          () => applyOptimistic({ type: "add", product }),
+                        )
                       }
                       className="flex h-full w-full flex-col items-start gap-1 rounded-xl bg-white/5 p-3 text-left backdrop-blur-md transition-colors hover:bg-white/10 active:bg-white/15 disabled:opacity-50"
                     >
@@ -1059,7 +1214,7 @@ function TablePanel({
             </span>
           </div>
 
-          {!order || items.length === 0 ? (
+          {!order || optimisticItems.length === 0 ? (
             table.status === "ocupada" ? (
               // Mesa abierta sin consumos: no se puede cobrar, pero tampoco
               // puede quedar ocupada para siempre. Soltarla es del encargado.

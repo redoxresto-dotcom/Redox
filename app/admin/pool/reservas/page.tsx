@@ -2,7 +2,6 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import {
-  formatCelularUy,
   nombreMesa,
   poolMinutosATexto,
   type PoolReservation,
@@ -121,7 +120,7 @@ export default async function ReservasPoolPage({
                 <th className="px-4 py-3 font-normal">Hora</th>
                 <th className="px-4 py-3 font-normal">Mesa</th>
                 <th className="px-4 py-3 font-normal">Cliente</th>
-                <th className="px-4 py-3 font-normal">Celular</th>
+                <th className="px-4 py-3 font-normal">Contacto</th>
                 <th className="px-4 py-3 font-normal">Juego</th>
                 <th className="px-4 py-3 font-normal">Estado</th>
                 <th className="px-4 py-3 font-normal">Detalle</th>
@@ -140,8 +139,8 @@ export default async function ReservasPoolPage({
                     {nombreMesa(r.table_number, r.table_name)}
                   </td>
                   <td className="px-4 py-2.5 font-medium">{r.customer_name}</td>
-                  <td className="px-4 py-2.5 tabular-nums text-[var(--color-muted)]">
-                    {formatCelularUy(r.phone)}
+                  <td className="px-4 py-2.5 text-[var(--color-muted)]">
+                    {r.contact ?? "—"}
                   </td>
                   <td className="px-4 py-2.5 text-[var(--color-muted)]">
                     {poolMinutosATexto(r.play_minutes)}

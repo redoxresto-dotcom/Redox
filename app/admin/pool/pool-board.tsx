@@ -21,7 +21,6 @@ import {
 import { closeOrder } from "../actions";
 import {
   formatMoney,
-  normalizarCelularUy,
   POOL_BLOQUES,
   POOL_LECTOR_TIMEOUT_MS,
   nombreMesa,
@@ -942,9 +941,7 @@ function PanelReserva({
   const [tableId, setTableId] = useState(mesasPool[0]?.id ?? "");
   const [minutes, setMinutes] = useState<number>(60);
   const [cuando, setCuando] = useState(ahoraLocalInput);
-  const [tel, setTel] = useState("");
-  const telNorm = normalizarCelularUy(tel);
-  const telMal = tel.trim() !== "" && !telNorm;
+  const [contacto, setContacto] = useState("");
 
   // Aviso, no bloqueo: los clientes se atrasan y adelantan. Se marca si el
   // turno nuevo pisa a otro vigente de la misma mesa.
@@ -985,7 +982,7 @@ function PanelReserva({
             createPoolReservation({
               tableId,
               customerName: String(fd.get("customer") ?? ""),
-              phone: tel,
+              contact: contacto,
               scheduledAt: cuando,
               minutes,
             }),
@@ -1007,27 +1004,17 @@ function PanelReserva({
         </label>
 
         <label className="grid gap-1">
-          <span className="text-xs text-[var(--color-muted)]">Celular</span>
+          <span className="text-xs text-[var(--color-muted)]">
+            Contacto (opcional)
+          </span>
           <input
-            name="phone"
-            type="tel"
-            required
-            inputMode="tel"
-            placeholder="09X XXX XXX"
-            value={tel}
-            onChange={(e) => setTel(e.target.value)}
-            aria-invalid={telMal}
-            className={`rounded-lg px-3 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none ${
-              telMal
-                ? "bg-[var(--color-danger)]/10 ring-1 ring-[var(--color-danger)]/50"
-                : "bg-white/5 focus:bg-white/10"
-            }`}
+            name="contact"
+            type="text"
+            placeholder="Documento, celular, mail…"
+            value={contacto}
+            onChange={(e) => setContacto(e.target.value)}
+            className="rounded-lg bg-white/5 px-3 py-2 text-sm shadow-inner shadow-black/20 backdrop-blur-md outline-none focus:bg-white/10"
           />
-          {telMal ? (
-            <span className="text-xs text-[var(--color-danger)]">
-              Celular uruguayo: 09 y siete dígitos más.
-            </span>
-          ) : null}
         </label>
 
         <label className="grid gap-1">
@@ -1078,7 +1065,7 @@ function PanelReserva({
         <div className="flex items-end">
           <button
             type="submit"
-            disabled={isPending || !tableId || !telNorm}
+            disabled={isPending || !tableId}
             className="w-full rounded-lg bg-[var(--color-accent)] px-4 py-2 text-sm font-semibold text-[#04121c] disabled:opacity-50 sm:w-auto"
           >
             Guardar reserva

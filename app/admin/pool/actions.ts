@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { requireAdmin, requireStaff } from "@/lib/auth";
-import { normalizarCelularUy } from "@/lib/types";
 
 export type PoolResult = { error: string | null };
 
@@ -20,9 +19,8 @@ function traducir(mensaje: string, porDefecto: string): string {
     "La partida no existe o ya está terminada",
     "Solo el personal",
     // Reservas
-    "Sólo administración",
+    "Sólo el personal",
     "Falta el nombre del cliente",
-    "Falta el celular del cliente",
     "Falta la hora del turno",
     "Las horas de juego tienen que ser",
     "No se pueden reservar más de",
@@ -149,7 +147,8 @@ export async function expireDuePoolSessions(): Promise<PoolResult> {
 export async function createPoolReservation(datos: {
   tableId: string;
   customerName: string;
-  phone: string;
+  /** Documento, celular, mail… lo que el cliente prefiera dejar. Opcional. */
+  contact: string;
   scheduledAt: string;
   minutes: number;
 }): Promise<PoolResult> {
@@ -157,13 +156,6 @@ export async function createPoolReservation(datos: {
 
   if (!Number.isInteger(datos.minutes) || datos.minutes <= 0) {
     return { error: "Las horas de juego tienen que ser un número positivo." };
-  }
-
-  const celular = normalizarCelularUy(datos.phone);
-  if (!celular) {
-    return {
-      error: "El celular no parece un celular uruguayo (09X XXX XXX).",
-    };
   }
 
   // El input datetime-local manda "YYYY-MM-DDTHH:mm" sin zona. Se interpreta en
@@ -182,7 +174,7 @@ export async function createPoolReservation(datos: {
   const { error } = await supabase.rpc("pool_reserve", {
     p_table_id: datos.tableId,
     p_customer: datos.customerName,
-    p_phone: celular,
+    p_contact: datos.contact.trim() || null,
     p_scheduled_at: cuando.toISOString(),
     p_minutes: datos.minutes,
   });

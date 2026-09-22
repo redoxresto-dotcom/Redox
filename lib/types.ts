@@ -356,7 +356,8 @@ export type PoolReservation = {
   table_number: number;
   table_name: string | null;
   customer_name: string;
-  phone: string;
+  /** Dato de contacto libre: documento, celular, mail… Opcional. */
+  contact: string | null;
   /** El turno: la "hora de reserva" que se muestra en la grilla del salón. */
   scheduled_at: string;
   play_minutes: number;
@@ -372,24 +373,6 @@ export type PoolReservation = {
 
 /** Opciones de "horas de juego" al reservar. Mismos bloques que una venta. */
 export const POOL_RESERVA_BLOQUES = [30, 60, 90, 120] as const;
-
-/**
- * Normaliza un celular uruguayo a nueve dígitos (`09XXXXXXX`), o devuelve null
- * si no lo parece. Acepta espacios, guiones y el prefijo internacional +598.
- */
-export function normalizarCelularUy(crudo: string): string | null {
-  let d = (crudo ?? "").replace(/\D/g, "");
-  if (d.startsWith("598")) d = d.slice(3);
-  if (d.length === 8 && d.startsWith("9")) d = `0${d}`;
-  return /^09\d{7}$/.test(d) ? d : null;
-}
-
-/** `09XXXXXXX` → `09X XXX XXX` para mostrar. */
-export function formatCelularUy(normalizado: string): string {
-  return /^09\d{7}$/.test(normalizado)
-    ? `${normalizado.slice(0, 3)} ${normalizado.slice(3, 6)} ${normalizado.slice(6)}`
-    : normalizado;
-}
 
 /**
  * Un turno que ya pasó su hora y sigue sin activarse es un cliente demorado.

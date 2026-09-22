@@ -37,13 +37,13 @@ function itemsFor(role: StaffRole): NavItem[] {
   const items: NavItem[] = [
     { href: "/admin", label: "Salón", icon: IconSalon },
     { href: "/admin/mis-mesas", label: "Mis mesas", icon: IconMesas },
+    { href: "/admin/pool", label: "Pool", icon: IconPool },
   ];
 
   if (!hasRank(role, "admin")) return items;
 
   items.push(
     { href: "/admin/caja", label: "Caja", icon: IconCaja },
-    { href: "/admin/pool", label: "Pool", icon: IconPool },
     { href: "/estacion/barra", label: "Barra", icon: IconBarra },
     { href: "/estacion/cocina", label: "Cocina", icon: IconCocina },
     { href: "/admin/catalogo", label: "Catálogo", icon: IconCatalogo },

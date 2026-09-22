@@ -42,6 +42,8 @@ export type Product = {
   in_menu: boolean;
   /** Combo o promoción: un producto que agrupa a otros con un precio propio. */
   is_combo: boolean;
+  /** La tarifa vigente de pool: de acá sale el precio de `pool_sell_time`. */
+  is_pool_rate: boolean;
   /**
    * Vigencia de la promoción (solo tiene sentido en combos). Fechas `YYYY-MM-DD`
    * en hora de Montevideo. `null` = sin límite por ese lado. Fuera de la

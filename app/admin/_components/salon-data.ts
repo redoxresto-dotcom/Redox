@@ -28,6 +28,8 @@ export type SalonData = {
   pendingAlerts: Record<string, AlertType[]>;
   hasOpenShift: boolean;
   sectors: Sector[];
+  /** Mesas que además son mesas de pool: se marcan en el tablero del salón. */
+  poolTableIds: string[];
 };
 
 /**
@@ -68,8 +70,7 @@ export async function loadSalon(): Promise<SalonData> {
       .is("closed_at", null)
       .maybeSingle(),
     supabase.from("sectors").select("*").order("sort_order").order("name"),
-    // Las mesas de pool se operan desde su propia pantalla: venden tiempo, no
-    // comandas. Mezclarlas en el salón confunde dos trabajos distintos.
+    // Para marcar en el tablero cuáles son mesas de pool (ver poolTableIds).
     supabase.from("pool_tables").select("table_id"),
   ]);
 
@@ -77,9 +78,12 @@ export async function loadSalon(): Promise<SalonData> {
     ((poolRes.data ?? []) as { table_id: string }[]).map((p) => p.table_id),
   );
 
-  // Pool, barra y las mesas internas del sistema no van en el tablero del salón.
+  // Barra y las mesas internas del sistema no van en el tablero del salón. Las
+  // de pool sí: el tiempo se vende desde /admin/pool, pero un cliente sentado
+  // ahí puede pedir de comer o tomar igual que en cualquier mesa, y el mozo
+  // necesita encontrarla en el salón para cargarle el consumo.
   const tables = ((tablesRes.data ?? []) as BarTable[]).filter(
-    (t) => !esDePool.has(t.id) && !t.is_bar && !t.is_system,
+    (t) => !t.is_bar && !t.is_system,
   );
   const orders = (ordersRes.data ?? []) as OrderWithItems[];
   const alerts = (alertsRes.data ?? []) as Alert[];
@@ -105,10 +109,13 @@ export async function loadSalon(): Promise<SalonData> {
     };
   });
 
-  // Un combo fuera de su ventana de vigencia no se ofrece en la mesa.
+  // Un combo fuera de su ventana de vigencia no se ofrece en la mesa. La
+  // tarifa de pool tampoco: ahora que el mozo tiene su propia sección Pool
+  // para vender tiempo, dejarla en este catálogo solo invita a cargarla por
+  // error como si fuera un producto suelto, fuera de una partida real.
   const hoy = hoyMontevideo();
   const products = ((productsRes.data ?? []) as Product[]).filter(
-    (p) => !p.is_combo || comboVigente(p, hoy),
+    (p) => !p.is_pool_rate && (!p.is_combo || comboVigente(p, hoy)),
   );
 
   return {
@@ -126,5 +133,6 @@ export async function loadSalon(): Promise<SalonData> {
     }, {}),
     hasOpenShift: Boolean(shiftRes.data),
     sectors: (sectorsRes.data ?? []) as Sector[],
+    poolTableIds: [...esDePool],
   };
 }

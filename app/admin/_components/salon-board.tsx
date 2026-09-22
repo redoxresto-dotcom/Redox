@@ -138,6 +138,8 @@ type Props = {
   staff: { id: string; full_name: string }[];
   /** Motivo por el que la pantalla anterior lo mandó para acá, si lo hubo. */
   notice?: string | null;
+  /** Mesas que además son mesas de pool: se marcan en el tablero. */
+  poolTableIds: string[];
 };
 
 const CATEGORIES: ProductCategory[] = ["bebida", "comida", "otro"];
@@ -154,10 +156,12 @@ export function SalonBoard({
   scope = "salon",
   staff,
   notice,
+  poolTableIds,
 }: Props) {
   const router = useRouter();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const poolSet = useMemo(() => new Set(poolTableIds), [poolTableIds]);
 
   // Mesas que quedaron sin sector: mejor una pestaña de más que una mesa que
   // no aparece en ninguna pantalla.
@@ -404,6 +408,7 @@ export function SalonBoard({
                       : undefined
                   }
                   alerts={pendingAlerts[detail.table.id] ?? []}
+                  isPool={poolSet.has(detail.table.id)}
                   onSelect={() => {
                     setError(null);
                     setSelectedId(detail.table.id);
@@ -449,6 +454,7 @@ export function SalonBoard({
                         : undefined
                     }
                     alerts={pendingAlerts[detail.table.id] ?? []}
+                    isPool={poolSet.has(detail.table.id)}
                     onSelect={() => {
                       setError(null);
                       setSelectedId(detail.table.id);
@@ -468,6 +474,7 @@ export function SalonBoard({
           products={products}
           isMine={selected.table.assigned_waiter === currentUserId}
           isManager={esEncargado}
+          isPool={poolSet.has(selected.table.id)}
           staff={staff.filter((p) => p.id !== selected.table.assigned_waiter)}
           waiterName={
             selected.table.assigned_waiter
@@ -495,11 +502,13 @@ function GridTableCard({
   detail,
   waiterName,
   alerts,
+  isPool,
   onSelect,
 }: {
   detail: TableDetail;
   waiterName?: string;
   alerts: AlertType[];
+  isPool: boolean;
   onSelect: () => void;
 }) {
   const { table, order, items } = detail;
@@ -532,6 +541,14 @@ function GridTableCard({
           {table.name ? (
             <span className="truncate text-xs text-[var(--color-muted)]">
               {table.name}
+            </span>
+          ) : null}
+          {isPool ? (
+            <span
+              title="Mesa de pool: el tiempo se vende desde Pool"
+              className="shrink-0 rounded-full bg-[var(--color-accent)]/15 px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-accent)]"
+            >
+              🎱 Pool
             </span>
           ) : null}
         </span>
@@ -578,11 +595,13 @@ function FloorTableCard({
   detail,
   waiterName,
   alerts,
+  isPool,
   onSelect,
 }: {
   detail: TableDetail;
   waiterName?: string;
   alerts: AlertType[];
+  isPool: boolean;
   onSelect: () => void;
 }) {
   const { table, order, items } = detail;
@@ -594,9 +613,10 @@ function FloorTableCard({
   return (
     <FloorTable
       table={table}
-      label={`Mesa ${table.number}`}
+      label={`Mesa ${table.number}${isPool ? " (pool)" : ""}`}
       title={
-        waiterName ? `Mesa ${table.number} · atiende ${waiterName}` : undefined
+        (isPool ? `Mesa de pool — el tiempo se vende desde Pool. ` : "") +
+        (waiterName ? `Mesa ${table.number} · atiende ${waiterName}` : "")
       }
       className={`cursor-pointer transition-all hover:brightness-125 ${tono}`}
       onClick={onSelect}
@@ -608,8 +628,9 @@ function FloorTableCard({
         </span>
       ) : null}
 
-      <span className="text-xl leading-none font-bold tabular-nums">
+      <span className="flex items-center gap-1 text-xl leading-none font-bold tabular-nums">
         {table.number}
+        {isPool ? <span className="text-xs">🎱</span> : null}
       </span>
       {table.name ? (
         <span className="max-w-full truncate text-[10px] opacity-80">
@@ -652,6 +673,7 @@ function TablePanel({
   waiterName,
   isMine,
   isManager,
+  isPool,
   staff,
   hasOpenShift,
   onClose,
@@ -662,6 +684,7 @@ function TablePanel({
   waiterName?: string;
   isMine: boolean;
   isManager: boolean;
+  isPool: boolean;
   staff: { id: string; full_name: string }[];
   hasOpenShift: boolean;
   onClose: () => void;
@@ -752,6 +775,17 @@ function TablePanel({
             <p className="text-xs text-[var(--color-muted)]">
               {table.status === "ocupada" ? "Ocupada" : "Libre"}
               {waiterName ? ` · atiende ${waiterName}` : ""}
+              {isPool ? (
+                <>
+                  {" · "}
+                  <Link
+                    href="/admin/pool"
+                    className="text-[var(--color-accent)] underline-offset-2 hover:underline"
+                  >
+                    mesa de pool 🎱
+                  </Link>
+                </>
+              ) : null}
             </p>
           </div>
 

@@ -228,20 +228,18 @@ export function PoolBoard({
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-2">
-          {isManager ? (
-            <button
-              type="button"
-              onClick={() => setReservaAbierta((v) => !v)}
-              className="rounded-lg bg-white/5 px-3 py-2 text-sm whitespace-nowrap text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-white/10 hover:text-[var(--color-ink)]"
-            >
-              {reservaAbierta ? "Cerrar reserva" : "Reserva Pool"}
-              {pendientes > 0 && !reservaAbierta ? (
-                <span className="ml-1.5 rounded-full bg-[var(--color-accent)]/20 px-1.5 py-0.5 text-xs font-semibold text-[var(--color-accent)] tabular-nums">
-                  {pendientes}
-                </span>
-              ) : null}
-            </button>
-          ) : null}
+          <button
+            type="button"
+            onClick={() => setReservaAbierta((v) => !v)}
+            className="rounded-lg bg-white/5 px-3 py-2 text-sm whitespace-nowrap text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-white/10 hover:text-[var(--color-ink)]"
+          >
+            {reservaAbierta ? "Cerrar reserva" : "Reserva Pool"}
+            {pendientes > 0 && !reservaAbierta ? (
+              <span className="ml-1.5 rounded-full bg-[var(--color-accent)]/20 px-1.5 py-0.5 text-xs font-semibold text-[var(--color-accent)] tabular-nums">
+                {pendientes}
+              </span>
+            ) : null}
+          </button>
           <Link
             href="/pool"
             target="_blank"
@@ -269,7 +267,7 @@ export function PoolBoard({
         </div>
       </header>
 
-      {reservaAbierta && isManager ? (
+      {reservaAbierta ? (
         <PanelReserva
           mesasPool={mesasPool}
           reservas={reservas}
@@ -328,7 +326,6 @@ export function PoolBoard({
           reservasPorMesa={reservasPorMesa}
           total={pendientes}
           ahora={ahora}
-          isManager={isManager}
           isPending={isPending}
           onRun={run}
         />
@@ -638,7 +635,6 @@ function ReservasPendientes({
   reservasPorMesa,
   total,
   ahora,
-  isManager,
   isPending,
   onRun,
 }: {
@@ -646,7 +642,6 @@ function ReservasPendientes({
   reservasPorMesa: Map<string, PoolReservation[]>;
   total: number;
   ahora: number;
-  isManager: boolean;
   isPending: boolean;
   onRun: (fn: () => Promise<{ error: string | null }>) => void;
 }) {
@@ -702,47 +697,45 @@ function ReservasPendientes({
                           {poolMinutosATexto(r.play_minutes)}
                         </span>
                       </span>
-                      {isManager ? (
-                        <div className="flex w-full shrink-0 flex-wrap justify-end gap-1.5 sm:w-auto">
-                          <button
-                            type="button"
-                            disabled={isPending || !libre}
-                            title={
-                              libre
-                                ? "Arranca la partida con esta reserva"
-                                : "La mesa está ocupada"
-                            }
-                            onClick={() =>
-                              onRun(() => activatePoolReservation(r.id))
-                            }
-                            className="rounded-md bg-[var(--color-accent)] px-2.5 py-1 text-xs font-semibold text-[#04121c] disabled:opacity-40"
-                          >
-                            Activar
-                          </button>
-                          <button
-                            type="button"
-                            disabled={isPending}
-                            title="Avisó que no viene o se canceló"
-                            onClick={() =>
-                              onRun(() => releasePoolReservation(r.id))
-                            }
-                            className="rounded-md bg-white/5 px-2.5 py-1 text-xs text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-[var(--color-danger)]/15 hover:text-[var(--color-danger)] disabled:opacity-40"
-                          >
-                            Liberar
-                          </button>
-                          <button
-                            type="button"
-                            disabled={isPending}
-                            title="No vino ni avisó"
-                            onClick={() =>
-                              onRun(() => releasePoolReservation(r.id, true))
-                            }
-                            className="rounded-md bg-white/5 px-2.5 py-1 text-xs text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-[var(--color-danger)]/15 hover:text-[var(--color-danger)] disabled:opacity-40"
-                          >
-                            No vino
-                          </button>
-                        </div>
-                      ) : null}
+                      <div className="flex w-full shrink-0 flex-wrap justify-end gap-1.5 sm:w-auto">
+                        <button
+                          type="button"
+                          disabled={isPending || !libre}
+                          title={
+                            libre
+                              ? "Arranca la partida con esta reserva"
+                              : "La mesa está ocupada"
+                          }
+                          onClick={() =>
+                            onRun(() => activatePoolReservation(r.id))
+                          }
+                          className="rounded-md bg-[var(--color-accent)] px-2.5 py-1 text-xs font-semibold text-[#04121c] disabled:opacity-40"
+                        >
+                          Activar
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isPending}
+                          title="Avisó que no viene o se canceló"
+                          onClick={() =>
+                            onRun(() => releasePoolReservation(r.id))
+                          }
+                          className="rounded-md bg-white/5 px-2.5 py-1 text-xs text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-[var(--color-danger)]/15 hover:text-[var(--color-danger)] disabled:opacity-40"
+                        >
+                          Liberar
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isPending}
+                          title="No vino ni avisó"
+                          onClick={() =>
+                            onRun(() => releasePoolReservation(r.id, true))
+                          }
+                          className="rounded-md bg-white/5 px-2.5 py-1 text-xs text-[var(--color-muted)] backdrop-blur-md transition-colors hover:bg-[var(--color-danger)]/15 hover:text-[var(--color-danger)] disabled:opacity-40"
+                        >
+                          No vino
+                        </button>
+                      </div>
                     </li>
                   );
                 })}

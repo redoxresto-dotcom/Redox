@@ -153,7 +153,7 @@ export async function createPoolReservation(datos: {
   scheduledAt: string;
   minutes: number;
 }): Promise<PoolResult> {
-  await requireAdmin();
+  await requireStaff();
 
   if (!Number.isInteger(datos.minutes) || datos.minutes <= 0) {
     return { error: "Las horas de juego tienen que ser un número positivo." };
@@ -205,7 +205,7 @@ export async function activatePoolReservation(
   reservationId: string,
   minutes?: number,
 ): Promise<PoolResult> {
-  await requireAdmin();
+  await requireStaff();
 
   if (
     minutes !== undefined &&
@@ -238,7 +238,7 @@ export async function releasePoolReservation(
   reservationId: string,
   noShow = false,
 ): Promise<PoolResult> {
-  await requireAdmin();
+  await requireStaff();
 
   const supabase = await getSupabaseServerClient();
   const { error } = await supabase.rpc("pool_reservation_release", {

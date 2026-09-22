@@ -17,9 +17,6 @@ export default function Home() {
         <p className="mt-2 text-[var(--color-muted)]">
           Gestión de salón, barra y cocina.
         </p>
-        <p className="mt-1 text-[11px] tracking-[0.24em] text-[var(--color-muted)] uppercase">
-          Punta Carretas
-        </p>
       </div>
 
       <div className="grid gap-3">

@@ -27,9 +27,6 @@ export default async function LoginPage({
 
       <div className="flex flex-col items-center gap-2">
         <RedoxLogo width={320} />
-        <p className="text-[11px] tracking-[0.24em] text-[var(--color-muted)] uppercase">
-          Punta Carretas
-        </p>
       </div>
 
       {notice ? (

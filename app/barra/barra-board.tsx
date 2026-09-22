@@ -83,7 +83,7 @@ export function BarraBoard({
 
   const ticketData = useMemo<TicketData>(
     () => ({
-      emisor: { nombre: "Redox", linea2: "Punta Carretas" },
+      emisor: { nombre: "Redox" },
       comprobante: {
         numero: (order?.id ?? "").slice(0, 8).toUpperCase() || "—",
         fecha: new Date().toLocaleString("es-UY", {

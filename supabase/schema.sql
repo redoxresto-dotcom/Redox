@@ -238,11 +238,15 @@ $$;
 --       - NO ve orders ni order_items     → la plata no se expone al público.
 --
 --   * service_role (solo servidor, SUPABASE_SERVICE_ROLE_KEY)
---       - Bypassea RLS. Todas las operaciones del POS (cargar productos,
---         cobrar, resolver alertas, CRUD de catálogo) pasan por acá.
+--       - Bypassea RLS. En esta iteración (sin login) todas las operaciones
+--         del POS pasaban por acá.
 --
---  Cuando agreguemos login de mozos, se reemplazan las policies de anon por
---  policies basadas en auth.uid() / auth.jwt() ->> 'role'.
+--  DESACTUALIZADO desde 002_auth.sql: con el login de mozos, las operaciones
+--  del POS pasan por el cliente atado a la sesión (anon key + cookies), que
+--  sigue respetando la RLS basada en auth.uid(). service_role quedó reservado
+--  para lo que corre sin usuario detrás, como el webhook de las mesas de pool
+--  (app/api/pool-device/route.ts). El modelo de roles vigente vive en
+--  002_auth.sql y 009_gerente.sql (is_staff() / is_admin() / is_manager()).
 -- =============================================================================
 
 alter table public.products    enable row level security;

@@ -202,9 +202,14 @@ export function CatalogManager({
         pasaba de la pantalla, obligando a scrollear para llegar a "Quitar".
         Acá el contenido angosto (precios, badges) se corta con truncate en
         vez de estirar la tabla.
+
+        min-w-[640px] en la tabla: sin esto, w-full ataba el ancho de la
+        tabla al del contenedor y en un celular esas mismas columnas se
+        achicaban hasta volverse ilegibles (una sola letra por celda) en vez
+        de activar el scroll horizontal del contenedor.
       */}
       <div className="overflow-x-auto rounded-xl border border-white/10 bg-[var(--color-surface)]/30 shadow-xl shadow-black/20 backdrop-blur-xl">
-        <table className="w-full table-fixed text-sm">
+        <table className="w-full min-w-[640px] table-fixed text-sm">
           <thead className="bg-white/5 text-left text-xs tracking-wide text-[var(--color-muted)] uppercase backdrop-blur-md">
             <tr>
               <th className="w-[21%] truncate px-3 py-2.5 font-medium">Producto</th>
@@ -254,26 +259,36 @@ export function CatalogManager({
                               />
                             ) : null}
                             <div className="min-w-0">
-                          {product.name}
-                          {product.is_combo ? (
-                            <span className="ml-2 rounded bg-[var(--color-accent)]/15 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-[var(--color-accent)] uppercase">
-                              combo
-                            </span>
-                          ) : null}
-                          {comboUltimoDia(product, hoy) ? (
-                            <span className="ml-2 rounded bg-[var(--color-busy)]/15 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-[var(--color-busy)] uppercase">
-                              último día
-                            </span>
-                          ) : product.is_combo && !comboVigente(product, hoy) ? (
-                            <span className="ml-2 rounded bg-[var(--color-surface-2)] px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-[var(--color-muted)] uppercase">
-                              vencido
-                            </span>
-                          ) : null}
-                          {!product.active ? (
-                            <span className="ml-2 rounded bg-[var(--color-surface-2)] px-1.5 py-0.5 text-[10px] tracking-wide uppercase">
-                              fuera de venta
-                            </span>
-                          ) : null}
+                          {/*
+                            flex-wrap en vez de texto suelto con ml-2: sin esto,
+                            dos badges seguidos (p.ej. "combo" + "último día")
+                            no tenían un punto de corte entre sí y el navegador
+                            los pegaba en la misma línea, desbordando la celda
+                            angosta de mobile y superponiéndose con la columna
+                            de al lado.
+                          */}
+                          <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+                            <span>{product.name}</span>
+                            {product.is_combo ? (
+                              <span className="rounded bg-[var(--color-accent)]/15 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-[var(--color-accent)] uppercase">
+                                combo
+                              </span>
+                            ) : null}
+                            {comboUltimoDia(product, hoy) ? (
+                              <span className="rounded bg-[var(--color-busy)]/15 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-[var(--color-busy)] uppercase">
+                                último día
+                              </span>
+                            ) : product.is_combo && !comboVigente(product, hoy) ? (
+                              <span className="rounded bg-[var(--color-surface-2)] px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-[var(--color-muted)] uppercase">
+                                vencido
+                              </span>
+                            ) : null}
+                            {!product.active ? (
+                              <span className="rounded bg-[var(--color-surface-2)] px-1.5 py-0.5 text-[10px] tracking-wide uppercase">
+                                fuera de venta
+                              </span>
+                            ) : null}
+                          </span>
                           {product.is_combo && comboItems[product.id] ? (
                             <span className="block max-w-xs truncate text-xs text-[var(--color-muted)]">
                               {comboItems[product.id]

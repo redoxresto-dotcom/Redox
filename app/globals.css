@@ -45,6 +45,21 @@ button {
 }
 
 /*
+ * La lista desplegable de un <select> la dibuja el navegador, no la página:
+ * hereda el texto claro del tema pero sale sobre el fondo blanco del sistema,
+ * y las opciones quedan ilegibles. Se le avisa que el control es oscuro y se
+ * pintan las opciones con los colores de la app.
+ */
+select {
+  color-scheme: dark;
+}
+select option,
+select optgroup {
+  background-color: var(--color-surface-2);
+  color: var(--color-ink);
+}
+
+/*
  * Las flechitas nativas de los inputs numéricos (Ancho, Alto, Precio, Costo)
  * no respetan el border-radius de la caja: quedan cuadradas asomando por la
  * esquina redondeada, como si el campo se saliera de su recuadro. Se sacan y

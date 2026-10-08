@@ -12,7 +12,7 @@ del ingreso. Personalizarlo para otro local es cambiar los archivos de
 
 ### 1. Crear el esquema en Supabase
 
-Proyecto **pos-venta-puntacarretas** (`mwxocugpawwpxdbwhrup`) → **SQL Editor** → **New query**.
+Proyecto **redox** (`yqzsrzmzramiandpwrni`) → **SQL Editor** → **New query**.
 Ejecutar **en este orden**:
 
 | # | Archivo | Qué hace |
@@ -31,6 +31,31 @@ Ejecutar **en este orden**:
 | 12 | [`supabase/011_estaciones_usuario.sql`](supabase/011_estaciones_usuario.sql) | Usuarios de barra y de cocina |
 | 13 | [`supabase/012_entregado.sql`](supabase/012_entregado.sql) | Estado «entregado» y pedido completo |
 | 14 | [`supabase/013_pool.sql`](supabase/013_pool.sql) | Mesas de pool con tiempo prepago |
+| 15 | [`supabase/014_pool_jugadores.sql`](supabase/014_pool_jugadores.sql) | Quién está jugando en cada mesa de pool |
+| 16 | [`supabase/015_combos.sql`](supabase/015_combos.sql) | Combos y promociones |
+| 17 | [`supabase/016_nombre_mesa.sql`](supabase/016_nombre_mesa.sql) | Nombre de mesa |
+| 18 | [`supabase/017_cancelar_pedido.sql`](supabase/017_cancelar_pedido.sql) | Cancelar un pedido |
+| 19 | [`supabase/018_cancelar_pedido_mozo.sql`](supabase/018_cancelar_pedido_mozo.sql) | Cancelar un pedido también es del mozo |
+| 20 | [`supabase/019_imagenes_productos.sql`](supabase/019_imagenes_productos.sql) | Imágenes de producto (bucket `product-images`) |
+| 21 | [`supabase/020_alertas_mesa_abierta.sql`](supabase/020_alertas_mesa_abierta.sql) | Los llamados del cliente solo valen con la mesa abierta |
+| 22 | [`supabase/020_reporte_por_mozo.sql`](supabase/020_reporte_por_mozo.sql) | Reporte de ventas por mozo |
+| 23 | [`supabase/021_editar_numero_mesa.sql`](supabase/021_editar_numero_mesa.sql) | Editar el número de mesa desde el plano |
+| 24 | [`supabase/022_pool_reservas.sql`](supabase/022_pool_reservas.sql) | Reservas de mesas de pool |
+| 25 | [`supabase/023_pool_nombre_mesa.sql`](supabase/023_pool_nombre_mesa.sql) | La sección de pool muestra el nombre de la mesa |
+| 26 | [`supabase/024_barra_ventas.sql`](supabase/024_barra_ventas.sql) | Pantalla de ventas de la barra |
+| 27 | [`supabase/025_login_documento.sql`](supabase/025_login_documento.sql) | Login por documento (C.I.) |
+| 28 | [`supabase/026_combo_vigencia.sql`](supabase/026_combo_vigencia.sql) | Vigencia de combos |
+| 29 | [`supabase/027_barra_mesa_unica.sql`](supabase/027_barra_mesa_unica.sql) | La barra vende directo, sin elegir mesa |
+| 30 | [`supabase/028_barra_open_table.sql`](supabase/028_barra_open_table.sql) | Abrir cuenta de barra sin mozo |
+| 31 | [`supabase/029_menu_carta.sql`](supabase/029_menu_carta.sql) | Repara la vista `menu` (foto, combo y vigencia) |
+| 32 | [`supabase/030_alertas_sin_mesa_abierta.sql`](supabase/030_alertas_sin_mesa_abierta.sql) | Revierte el requisito de mesa abierta para los llamados |
+| 33 | [`supabase/031_ventas_manuales.sql`](supabase/031_ventas_manuales.sql) | Ventas cargadas a mano (corte de luz o sin internet) |
+| 34 | [`supabase/032_agregar_producto_rpc.sql`](supabase/032_agregar_producto_rpc.sql) | Agregar un producto a la mesa en un solo viaje a la base |
+| 35 | [`supabase/033_acciones_salon_rpc.sql`](supabase/033_acciones_salon_rpc.sql) | Menos viajes a la base en las acciones del salón |
+| 36 | [`supabase/034_pool_reservas_personal.sql`](supabase/034_pool_reservas_personal.sql) | El mozo también puede cargar reservas de pool |
+| 37 | [`supabase/035_pool_reserva_contacto_libre.sql`](supabase/035_pool_reserva_contacto_libre.sql) | La reserva de pool pide un contacto libre, no un celular |
+| 38 | [`supabase/036_bebidas_con_sin_alcohol.sql`](supabase/036_bebidas_con_sin_alcohol.sql) | La carta separa bebidas con y sin alcohol |
+| 39 | [`supabase/037_baja_mesas_y_ajuste_pool.sql`](supabase/037_baja_mesas_y_ajuste_pool.sql) | Baja de mesas con historial y ajuste del cobro de pool |
 
 Todos son idempotentes: se pueden volver a correr sin romper nada.
 
@@ -38,7 +63,10 @@ Todos son idempotentes: se pueden volver a correr sin romper nada.
 
 **Authentication** → **Users** → **Add user** → *Create new user*:
 
-- Email y contraseña del encargado.
+- Email: el documento del encargado seguido de `@redox.local` (por ejemplo
+  `12345678@redox.local`). El personal entra con su documento, y por detrás se
+  arma ese email.
+- Contraseña del encargado.
 - Marcar **Auto Confirm User** (si no, Supabase le manda un mail de confirmación).
 
 > El **primer usuario** que se cree queda automáticamente como `gerente`.
@@ -65,11 +93,11 @@ Copiar `.env.local.example` a `.env.local` y completar:
 
 | Variable | Dónde sacarla | Notas |
 |---|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | Ya viene completa | `https://mwxocugpawwpxdbwhrup.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_URL` | Ya viene completa | `https://yqzsrzmzramiandpwrni.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Project Settings → **API Keys** → `anon` / `publishable` | Pública, protegida por RLS |
 | `SUPABASE_SERVICE_ROLE_KEY` | Project Settings → **API Keys** → `service_role` / `secret` | **Privada.** Nunca con prefijo `NEXT_PUBLIC_` |
 | `POOL_WEBHOOK_SECRET` | Lo generás vos | Token de las mesas de pool (Fase 4) |
-| `NEXT_PUBLIC_SITE_URL` | `http://localhost:3000` en desarrollo | Se usa para generar los QR |
+| `NEXT_PUBLIC_SITE_URL` | `http://localhost:3000` en desarrollo, `https://redox-ovkw.vercel.app` en producción | Se usa para generar los QR |
 
 ### 4. Levantar el proyecto
 
@@ -551,4 +579,5 @@ supabase/
   011_estaciones_usuario.sql  Usuarios de barra y de cocina
   012_entregado.sql       Estado entregado y pedido completo
   013_pool.sql            Mesas de pool con tiempo prepago
+  014 … 037               El resto, en orden numérico (ver la tabla de arriba)
 ```

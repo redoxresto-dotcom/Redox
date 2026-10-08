@@ -97,7 +97,7 @@ Copiar `.env.local.example` a `.env.local` y completar:
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Project Settings → **API Keys** → `anon` / `publishable` | Pública, protegida por RLS |
 | `SUPABASE_SERVICE_ROLE_KEY` | Project Settings → **API Keys** → `service_role` / `secret` | **Privada.** Nunca con prefijo `NEXT_PUBLIC_` |
 | `POOL_WEBHOOK_SECRET` | Lo generás vos | Token de las mesas de pool (Fase 4) |
-| `NEXT_PUBLIC_SITE_URL` | `http://localhost:3000` en desarrollo, `https://redox-ovkw.vercel.app` en producción | Se usa para generar los QR |
+| `NEXT_PUBLIC_SITE_URL` | `http://localhost:3000` en desarrollo, `https://redox-uy.vercel.app` en producción | Se usa para generar los QR |
 
 ### 4. Levantar el proyecto
 
